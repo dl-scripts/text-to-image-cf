@@ -15,8 +15,8 @@
 		"publish": true
 	},
 	"devDependencies": {
-		"typescript": "5.9.3",
-		"wrangler": "4.51.0"
+		"typescript": "^5.9.3",
+		"wrangler": "^4.53.0"
 	},
 	"private": true,
 	"scripts": {
@@ -24,5 +24,8 @@
 		"check": "tsc && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev"
+	},
+	"dependencies": {
+		"zhipuai-sdk-nodejs-v4": "^0.1.12"
 	}
 }

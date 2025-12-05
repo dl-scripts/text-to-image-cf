@@ -7,11 +7,10 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		AI: Ai;
+		ZHIPU_API_KEY?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
-
-// Begin runtime types
 /*! *****************************************************************************
 Copyright (c) Cloudflare. All rights reserved.
 Copyright (c) Microsoft Corporation. All rights reserved.
