@@ -25,6 +25,7 @@
 		"dev": "wrangler dev"
 	},
 	"dependencies": {
+		"openai": "^6.10.0",
 		"zhipuai-sdk-nodejs-v4": "^0.1.12"
 	}
 }
