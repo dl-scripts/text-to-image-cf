@@ -1,0 +1,7 @@
+curl -X POST https://text-to-image-cf.dal.workers.dev/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "你好"}
+    ]
+  }'

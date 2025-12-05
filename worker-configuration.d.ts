@@ -7,6 +7,8 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		ZHIPU_API_KEY?: string;
+        ZAI_MODEL: string;
+        
 	}
 }
 interface Env extends Cloudflare.Env {}

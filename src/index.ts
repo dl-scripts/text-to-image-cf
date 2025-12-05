@@ -28,9 +28,9 @@ async function handleChatCompletion(requestBody: any, env: Env): Promise<Respons
 		});
 		
 		const response = await client.createCompletions({
-			model: 'glm-4-flash',
+			model: env.ZAI_MODEL,
 			messages: messages,
-			temperature: requestBody.temperature ?? 0.7,
+			temperature: requestBody.temperature ?? 0.3,
 			maxTokens: requestBody.max_tokens ?? 4000,
 			stream: requestBody.stream ?? false
 		});
@@ -81,7 +81,7 @@ async function handleChatCompletion(requestBody: any, env: Env): Promise<Respons
 				id: `chatcmpl-${Date.now()}`,
 				object: 'chat.completion',
 				created: Math.floor(Date.now() / 1000),
-				model: 'glm-4-flash',
+				model: env.ZAI_MODEL,
 				choices: result.choices || [],
 				usage: result.usage || {
 					prompt_tokens: 0,
