@@ -6,7 +6,6 @@ declare namespace Cloudflare {
 		mainModule: typeof import("./src/index");
 	}
 	interface Env {
-		AI: Ai;
 		ZHIPU_API_KEY?: string;
 	}
 }

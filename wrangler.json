@@ -4,9 +4,6 @@
 	"main": "src/index.ts",
 	"name": "text-to-image-cf",
 	"upload_source_maps": true,
-	"ai": {
-		"binding": "AI"
-	},
 	"observability": {
 		"enabled": true
 	}

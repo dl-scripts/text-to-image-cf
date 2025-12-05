@@ -4,8 +4,7 @@
 	"cloudflare": {
 		"label": "Text to Image App",
 		"products": [
-			"Workers",
-			"AI"
+			"Workers"
 		],
 		"categories": [
 			"ai"
