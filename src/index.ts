@@ -168,7 +168,7 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 		
 		console.log('Chat completion request:', {
 			messageCount: messages.length,
-			firstMessage: messages[0]?.content?.substring(0, 50) + '...',
+			firstMessage: messages[0]?.content,
 			provider: selectedProvider,
 			model: config.model
 		});
@@ -221,8 +221,10 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 			} else {
 				// 非流式响应
 				const result = response as any;
+				const resultStr = JSON.stringify(result);
 				console.log('Chat completion successful:', {
-					responseLength: JSON.stringify(result).length,
+					responseLength: resultStr.length,
+					response: resultStr,
 					finishReason: result.choices?.[0]?.finish_reason
 				});
 
