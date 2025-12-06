@@ -9,6 +9,7 @@ declare namespace Cloudflare {
 		ZHIPU_API_KEY?: string;
         ZAI_MODEL: string;
         SILICONFLOW_API_KEY?: string;
+        SILICONFLOW_EMBEDDING_MODEL?: string,
         SILICONFLOW_MODEL: string;
         DEEPSEEK_API_KEY?: string;
 	}

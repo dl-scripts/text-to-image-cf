@@ -41,7 +41,9 @@ interface AIProviderConfig {
 	name: AIProvider;
 	apiKey: string;
 	model: string;
+	embedding_model?: string;
 	baseURL: string;
+	embeddingURL?: string;
 }
 
 // 获取请求中的provider参数，如果没有指定则随机选择
@@ -85,7 +87,9 @@ function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
 				name: 'siliconflow',
 				apiKey: env.SILICONFLOW_API_KEY || '',
 				model: env.SILICONFLOW_MODEL || 'Qwen/Qwen2.5-7B-Instruct',
-				baseURL: 'https://api.siliconflow.cn/v1/chat/completions'
+				embedding_model: env.SILICONFLOW_EMBEDDING_MODEL || 'Qwen/Qwen3-Embedding-0.6B',
+				baseURL: 'https://api.siliconflow.cn/v1/chat/completions',
+				embeddingURL: 'https://api.siliconflow.cn/v1/embeddings'
 			};
 		case 'deepseek':
 			return {
@@ -121,6 +125,41 @@ async function callZhipuAI(
 		maxTokens: options.max_tokens ?? 4000,
 		stream: options.stream ?? false
 	});
+}
+
+async function createEmbedding(config: AIProviderConfig, input: string) {
+	let dimensions = 1024;
+	switch (config.embedding_model) {
+		case 'Qwen/Qwen3-Embedding-4B':
+			dimensions = 2560;
+			break;
+		case 'Qwen/Qwen3-Embedding-8B':
+			dimensions = 4096;
+			break;
+		default:
+			break;
+	}
+	const options = {
+		method: 'POST',
+		headers: { 
+			Authorization: `Bearer ${config.apiKey}`, 
+			'Content-Type': 'application/json' 
+		},
+		body: JSON.stringify({
+			model: config.embedding_model,
+			input: input,
+			encoding_format: 'float',
+			dimensions: dimensions,
+		})
+	};
+
+	const response = await fetch(config.embeddingURL!, options);
+	if (!response.ok) {
+		const errorData = await response.json() as any;
+		throw new Error(errorData.error?.message || `API request failed for ${config.name}`);
+	}
+
+	return response;
 }
 
 // 调用SiliconFlow API (OpenAI兼容)
@@ -355,6 +394,7 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 	}
 }
 
+
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const startTime = Date.now();
@@ -416,6 +456,43 @@ export default {
 				
 				return response;
 			}
+
+			// 处理 embedding
+			if (pathname === '/v1/embeddings' || pathname === '/embeddings') {
+				// 只处理POST请求
+				if (method !== 'POST') {
+					return new Response('Method not allowed for embedding', { 
+						status: 405,
+						headers: corsHeaders
+					});
+				}
+
+				let requestText;
+				const contentType = request.headers.get('content-type') || '';
+				
+				if (contentType.includes('text/plain') || contentType === '') {
+					requestText = await request.text();
+				} else {
+					return new Response('Unsupported content type', {
+						status: 415,
+						headers: corsHeaders
+					});
+				}
+
+				const config = getProviderConfig('siliconflow', env);
+				const response = await createEmbedding(config, requestText);
+				
+				// 添加性能日志
+				const duration = Date.now() - startTime;
+				console.log('Embedding Request processed:', {
+					path: pathname,
+					duration: duration,
+					timestamp: new Date().toISOString()
+				});
+				
+				return response;
+			}
+
 
 			// 旧版兼容性 - 重定向到新的聊天API
 			if (pathname.startsWith('/api/ai/')) {
