@@ -166,12 +166,18 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 		selectedProvider = getProviderFromRequest(requestBody);
 		const config = getProviderConfig(selectedProvider, env);
 		
-		console.log('Chat completion request:', {
+
+		const messageData: any = {
 			messageCount: messages.length,
-			firstMessage: messages[0]?.content,
 			provider: selectedProvider,
 			model: config.model
-		});
+		}
+		for (let index = 0; index < messages.length; index++) {
+			const element = messages[index];
+			messageData['message_' + index] = element;
+		}
+
+		console.log('Chat completion request:', messageData);
 
 		const options = {
 			stream: requestBody.stream ?? false,
