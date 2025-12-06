@@ -158,11 +158,12 @@ async function callOpenAI(
 
 // Handle chat completion requests
 async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise<Response> {
+	let selectedProvider;
 	try {
 		const messages = requestBody.messages || [];
 		
 		// 获取要使用的provider
-		const selectedProvider = getProviderFromRequest(requestBody);
+		selectedProvider = getProviderFromRequest(requestBody);
 		const config = getProviderConfig(selectedProvider, env);
 		
 		console.log('Chat completion request:', {
@@ -313,7 +314,7 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 		}
 
 	} catch (error) {
-		console.error('Chat completion error:', error);
+		console.error('! Chat completion error:', error);
 		
 		let errorMessage = 'Unknown error occurred';
 		if (error instanceof Error) {
@@ -333,7 +334,8 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 			error: {
 				message: errorMessage,
 				type: 'chat_completion_error',
-				suggestion: '请检查输入内容或稍后重试'
+				suggestion: '请检查输入内容或稍后重试',
+				selectedProvider: selectedProvider,
 			}
 		}), {
 			status: 500,

@@ -6,9 +6,5 @@
 	"upload_source_maps": true,
 	"observability": {
 		"enabled": true
-	},
-	"vars": {
-		"ZAI_MODEL": "glm-4.5-flash",
-		"SILICONFLOW_MODEL": "Qwen/Qwen2.5-7B-Instruct"
 	}
 }
