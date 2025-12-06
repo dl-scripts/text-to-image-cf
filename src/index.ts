@@ -7,7 +7,6 @@ const corsHeaders = {
 	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-
 /**
  * 辅助函数：使用 Web Crypto API 生成 SHA-256 哈希
  * 将输入字符串转换为 16 进制字符串
@@ -35,7 +34,7 @@ interface ChatRequest {
 }
 
 // 定义AI提供商类型
-type AIProvider = 'zhipu' | 'siliconflow';
+type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek';
 
 // 定义AI提供商配置
 interface AIProviderConfig {
@@ -50,7 +49,7 @@ function getProviderFromRequest(request: ChatRequest): AIProvider {
 	// 检查请求中是否有provider参数
 	if (request.provider) {
 		const provider = request.provider.toLowerCase();
-		if (provider === 'zhipu' || provider === 'siliconflow') {
+		if (provider === 'zhipu' || provider === 'siliconflow' || provider === 'deepseek' ) {
 			return provider as AIProvider;
 		}
 	}
@@ -61,12 +60,12 @@ function getProviderFromRequest(request: ChatRequest): AIProvider {
 	)?.content?.split('provider=')[1]?.trim();
 	
 	// 如果指定了provider参数，使用指定的provider
-	if (providerParam === 'zhipu' || providerParam === 'siliconflow') {
+	if (providerParam === 'zhipu' || providerParam === 'siliconflow' || providerParam === 'deepseek') {
 		return providerParam as AIProvider;
 	}
 	
 	// 否则随机选择一个provider
-	const providers: AIProvider[] = ['zhipu', 'siliconflow'];
+	const providers: AIProvider[] = ['zhipu', 'siliconflow', 'deepseek'];
 	const randomIndex = Math.floor(Math.random() * providers.length);
 	return providers[randomIndex];
 }
@@ -88,12 +87,19 @@ function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
 				model: env.SILICONFLOW_MODEL || 'Qwen/Qwen2.5-7B-Instruct',
 				baseURL: 'https://api.siliconflow.cn/v1/chat/completions'
 			};
+		case 'deepseek':
+			return {
+				name: 'deepseek',
+				apiKey: env.DEEPSEEK_API_KEY || '',
+				model: 'deepseek-chat',
+				baseURL: 'https://api.deepseek.com/chat/completions'
+			};
 		default:
 			return {
-				name: 'zhipu',
-				apiKey: env.ZHIPU_API_KEY || '',
-				model: env.ZAI_MODEL || 'glm-4-flashx',
-				baseURL: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+				name: 'deepseek',
+				apiKey: env.DEEPSEEK_API_KEY || '',
+				model: 'deepseek-chat',
+				baseURL: 'https://api.deepseek.com/chat/completions'
 			};
 	}
 }
@@ -118,7 +124,7 @@ async function callZhipuAI(
 }
 
 // 调用SiliconFlow API (OpenAI兼容)
-async function callSiliconFlow(
+async function callOpenAI(
 	config: AIProviderConfig,
 	messages: ChatMessage[],
 	options: { stream?: boolean; temperature?: number; max_tokens?: number } = {}
@@ -239,9 +245,9 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 					}
 				});
 			}
-		} else if (selectedProvider === 'siliconflow') {
+		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek') {
 			// 使用SiliconFlow API (OpenAI兼容)
-			const response = await callSiliconFlow(config, messages, options);
+			const response = await callOpenAI(config, messages, options);
 
 			if (options.stream) {
 				// 流式响应 - 直接转发SiliconFlow的流式响应
