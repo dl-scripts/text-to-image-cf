@@ -113,7 +113,7 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 		if (selectedProvider === 'zhipu') {
 			// 使用智谱AI SDK
 			const response = await callZhipuAI(config, messages, options);
-			const result = await handleResponse(response, options, selectedProvider, config.model);
+			const result = await handleZhipuResponse(response, options, selectedProvider, config.model);
 			return result;
 
 		} else if (selectedProvider === 'siliconflow') {
@@ -157,6 +157,74 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 			}
 		});
 	}
+}
+
+async function handleZhipuResponse(response: any, options: any, selectedProvider: string, configModel: string) {
+
+	if (options.stream) {
+		// 流式响应
+		const encoder = new TextEncoder();
+		const readable = new ReadableStream({
+			async start(controller) {
+				try {
+					for await (const chunk of response) {
+						const content = chunk.choices[0]?.delta?.content || '';
+						if (content) {
+							controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+								choices: [{
+									delta: {
+										content: content
+									}
+								}]
+							})}\n\n`));
+						}
+					}
+					controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+				} catch (error) {
+					console.error('Stream error:', error);
+					controller.error(error);
+				}
+			}
+		});
+
+		return new Response(readable, {
+			headers: {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				'Connection': 'keep-alive',
+				'X-AI-Provider': selectedProvider,
+				...corsHeaders
+			}
+		});
+	} else {
+		// 非流式响应
+		const result = response as any;
+		console.log('Chat completion successful:', {
+			responseLength: JSON.stringify(result).length,
+			finishReason: result.choices?.[0]?.finish_reason
+		});
+
+		return new Response(JSON.stringify({
+			id: `chatcmpl-${Date.now()}`,
+			object: 'chat.completion',
+			created: Math.floor(Date.now() / 1000),
+			model: configModel,
+			choices: result.choices || [],
+			usage: result.usage || {
+				prompt_tokens: 0,
+				completion_tokens: 0,
+				total_tokens: 0
+			},
+			provider: selectedProvider
+		}), {
+			headers: {
+				'Content-Type': 'application/json',
+				'X-AI-Provider': selectedProvider,
+				...corsHeaders
+			}
+		});
+	}
+
 }
 
 async function handleResponse(response: Response, options: any, selectedProvider: string, configModel: string) {
@@ -221,70 +289,6 @@ async function handleResponse(response: Response, options: any, selectedProvider
 	}
 }
 
-
-			// if (options.stream) {
-			// 	// 流式响应
-			// 	const encoder = new TextEncoder();
-			// 	const readable = new ReadableStream({
-			// 		async start(controller) {
-			// 			try {
-			// 				for await (const chunk of response) {
-			// 					const content = chunk.choices[0]?.delta?.content || '';
-			// 					if (content) {
-			// 						controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-			// 							choices: [{
-			// 								delta: {
-			// 									content: content
-			// 								}
-			// 							}]
-			// 						})}\n\n`));
-			// 					}
-			// 				}
-			// 				controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-			// 			} catch (error) {
-			// 				console.error('Stream error:', error);
-			// 				controller.error(error);
-			// 			}
-			// 		}
-			// 	});
-
-			// 	return new Response(readable, {
-			// 		headers: {
-			// 			'Content-Type': 'text/event-stream',
-			// 			'Cache-Control': 'no-cache',
-			// 			'Connection': 'keep-alive',
-			// 			'X-AI-Provider': selectedProvider,
-			// 			...corsHeaders
-			// 		}
-			// 	});
-			// } else {
-			// 	// 非流式响应
-			// 	const result = response as any;
-			// 	console.log('Chat completion successful:', {
-			// 		responseLength: JSON.stringify(result).length,
-			// 		finishReason: result.choices?.[0]?.finish_reason
-			// 	});
-
-			// 	return new Response(JSON.stringify({
-			// 		id: `chatcmpl-${Date.now()}`,
-			// 		object: 'chat.completion',
-			// 		created: Math.floor(Date.now() / 1000),
-			// 		model: config.model,
-			// 		choices: result.choices || [],
-			// 		usage: result.usage || {
-			// 			prompt_tokens: 0,
-			// 			completion_tokens: 0,
-			// 			total_tokens: 0
-			// 		},
-			// 		provider: selectedProvider
-			// 	}), {
-			// 		headers: {
-			// 			'Content-Type': 'application/json',
-			// 			'X-AI-Provider': selectedProvider,
-			// 			...corsHeaders
-			// 		}
-			// 	});
-			// }
 
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
