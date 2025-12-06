@@ -1,4 +1,20 @@
 import { ZhipuAI } from 'zhipuai-sdk-nodejs-v4';
+import { callZhipuAI } from './zhipu';
+import { callSiliconFlow, handleSiliconFlowResponse } from './sf';
+
+// 添加缓存相关的接口定义
+interface CacheEntry {
+	response: any;
+	timestamp: number;
+	ttl: number; // 生存时间（秒）
+}
+
+interface D1Database {
+	get(key: string): Promise<any>;
+	put(key: string, value: any, options?: { expirationTtl?: number }): Promise<void>;
+	delete(key: string): Promise<void>;
+	list(): Promise<Array<{ key: string; metadata?: any }>>;
+}
 
 // CORS headers for cross-origin requests
 const corsHeaders = {
@@ -42,21 +58,29 @@ function getProviderFromRequest(request: ChatRequest): AIProvider {
 		}
 	}
 	
-	// 检查消息内容中是否包含provider参数
-	const providerParam = request.messages?.find(msg =>
-		msg.content?.includes('provider=')
-	)?.content?.split('provider=')[1]?.trim();
-	
-	// 如果指定了provider参数，使用指定的provider
-	if (providerParam === 'zhipu' || providerParam === 'siliconflow') {
-		return providerParam as AIProvider;
-	}
-	
-	// 否则随机选择一个provider
-	const providers: AIProvider[] = ['zhipu', 'siliconflow'];
-	const randomIndex = Math.floor(Math.random() * providers.length);
-	return providers[randomIndex];
+// 检查消息内容中是否包含provider参数
+const providerParam = request.messages?.find(msg =>
+	msg.content?.includes('provider=')
+)?.content?.split('provider=')[1]?.trim();
+
+// 如果指定了provider参数，使用指定的provider
+if (providerParam === 'zhipu' || providerParam === 'siliconflow') {
+	console.log('使用指定的provider:', providerParam);
+	return providerParam as AIProvider;
 }
+
+// 否则随机选择一个provider
+const providers: AIProvider[] = ['zhipu', 'siliconflow'];
+const randomIndex = Math.floor(Math.random() * providers.length);
+const selectedProvider = providers[randomIndex];
+
+console.log('随机选择provider:', {
+	timestamp: new Date().toISOString(),
+	selectedProvider: selectedProvider,
+	reason: 'no_provider_specified'
+});
+
+return selectedProvider;
 
 // 根据provider获取对应的配置
 function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
@@ -85,134 +109,6 @@ function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
 	}
 }
 
-// 调用智谱AI API
-async function callZhipuAI(
-	config: AIProviderConfig,
-	messages: ChatMessage[],
-	options: { stream?: boolean; temperature?: number; max_tokens?: number } = {}
-): Promise<any> {
-	console.log('调用智谱AI API:', {
-		provider: config.name,
-		model: config.model,
-		messageCount: messages.length,
-		apiKey: config.apiKey ? 'configured' : 'missing'
-	});
-
-	const client = new ZhipuAI({
-		apiKey: config.apiKey
-	});
-	
-	try {
-		const response = await client.createCompletions({
-			model: config.model,
-			messages: messages,
-			temperature: options.temperature ?? 0.3,
-			maxTokens: options.max_tokens ?? 4000,
-			stream: options.stream ?? false
-		});
-		
-		console.log('智谱AI API 响应成功:', {
-			responseType: typeof response,
-			hasChoices: !!response?.choices,
-			choicesCount: response?.choices?.length || 0
-		});
-		
-		return response;
-	} catch (error) {
-		console.error('智谱AI API 调用失败:', {
-			error: error instanceof Error ? error.message : String(error),
-			errorType: error instanceof Error ? error.constructor.name : typeof error,
-			provider: config.name,
-			model: config.model
-		});
-		throw error;
-	}
-}
-
-// 调用SiliconFlow API (OpenAI兼容)
-async function callSiliconFlow(
-	config: AIProviderConfig,
-	messages: ChatMessage[],
-	options: { stream?: boolean; temperature?: number; max_tokens?: number } = {}
-): Promise<Response> {
-	console.log('调用SiliconFlow API:', {
-		provider: config.name,
-		model: config.model,
-		messageCount: messages.length,
-		apiKey: config.apiKey ? 'configured' : 'missing',
-		baseURL: config.baseURL
-	});
-
-	if (!config.apiKey) {
-		throw new Error(`API key not configured for ${config.name}`);
-	}
-
-	const requestBody = JSON.stringify({
-		model: config.model,
-		messages: messages,
-		stream: options.stream || false,
-		temperature: options.temperature ?? 0.7,
-		max_tokens: options.max_tokens ?? 4000
-	});
-
-	console.log('SiliconFlow API 请求体:', requestBody);
-
-	const response = await fetch(config.baseURL, {
-		method: 'POST',
-		headers: {
-			'Authorization': `Bearer ${config.apiKey}`,
-			'Content-Type': 'application/json'
-		},
-		body: requestBody
-	});
-
-	console.log('SiliconFlow API 响应状态:', {
-		status: response.status,
-		statusText: response.statusText,
-		headers: Object.fromEntries(response.headers.entries())
-	});
-
-	if (!response.ok) {
-		const responseText = await response.text();
-		console.error('SiliconFlow API 错误响应内容:', responseText);
-		
-		// 检查是否是HTML响应（错误页面）
-		if (responseText.trim().startsWith('<')) {
-			console.error('SiliconFlow API 返回HTML错误页面，可能原因：', {
-				status: response.status,
-				contentType: response.headers.get('content-type'),
-				url: config.baseURL
-			});
-			throw new Error(`API返回HTML错误页面而非JSON，状态码：${response.status}`);
-		}
-		
-		try {
-			const errorData = JSON.parse(responseText);
-			throw new Error(errorData.error?.message || `API request failed for ${config.name}`);
-		} catch (parseError) {
-			console.error('SiliconFlow API 错误响应解析失败:', parseError);
-			throw new Error(`API返回非JSON格式错误，状态码：${response.status}，响应内容：${responseText.substring(0, 200)}`);
-		}
-	}
-
-	// 尝试解析JSON响应
-	let responseData;
-	try {
-		const responseText = await response.text();
-		console.log('SiliconFlow API 成功响应内容:', responseText);
-		responseData = JSON.parse(responseText);
-		console.log('SiliconFlow API 解析成功:', {
-			responseType: typeof responseData,
-			hasChoices: !!responseData?.choices,
-			choicesCount: responseData?.choices?.length || 0
-		});
-	} catch (parseError) {
-		console.error('SiliconFlow API 响应解析失败:', parseError);
-		throw new Error(`API响应解析失败：${parseError instanceof Error ? parseError.message : String(parseError)}`);
-	}
-
-	return response;
-}
 
 // Handle chat completion requests
 async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise<Response> {
@@ -239,133 +135,16 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 		if (selectedProvider === 'zhipu') {
 			// 使用智谱AI SDK
 			const response = await callZhipuAI(config, messages, options);
+			const result = await handleResponse(response, options, config.model, selectedProvider);
 
-			if (options.stream) {
-				// 流式响应
-				const encoder = new TextEncoder();
-				const readable = new ReadableStream({
-					async start(controller) {
-						try {
-							for await (const chunk of response) {
-								const content = chunk.choices[0]?.delta?.content || '';
-								if (content) {
-									controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-										choices: [{
-											delta: {
-												content: content
-											}
-										}]
-									})}\n\n`));
-								}
-							}
-							controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-						} catch (error) {
-							console.error('Stream error:', error);
-							controller.error(error);
-						}
-					}
-				});
 
-				return new Response(readable, {
-					headers: {
-						'Content-Type': 'text/event-stream',
-						'Cache-Control': 'no-cache',
-						'Connection': 'keep-alive',
-						'X-AI-Provider': selectedProvider,
-						...corsHeaders
-					}
-				});
-			} else {
-				// 非流式响应
-				const result = response as any;
-				console.log('Chat completion successful:', {
-					responseLength: JSON.stringify(result).length,
-					finishReason: result.choices?.[0]?.finish_reason
-				});
-
-				return new Response(JSON.stringify({
-					id: `chatcmpl-${Date.now()}`,
-					object: 'chat.completion',
-					created: Math.floor(Date.now() / 1000),
-					model: config.model,
-					choices: result.choices || [],
-					usage: result.usage || {
-						prompt_tokens: 0,
-						completion_tokens: 0,
-						total_tokens: 0
-					},
-					provider: selectedProvider
-				}), {
-					headers: {
-						'Content-Type': 'application/json',
-						'X-AI-Provider': selectedProvider,
-						...corsHeaders
-					}
-				});
-			}
 		} else if (selectedProvider === 'siliconflow') {
 			// 使用SiliconFlow API (OpenAI兼容)
 			const response = await callSiliconFlow(config, messages, options);
 
-			if (options.stream) {
-				// 流式响应 - 直接转发SiliconFlow的流式响应
-				const reader = response.body?.getReader();
-				if (!reader) {
-					throw new Error('Response body is not readable');
-				}
-				const encoder = new TextEncoder();
-				const readable = new ReadableStream({
-					async start(controller) {
-						try {
-							while (true) {
-								const { done, value } = await reader.read();
-								if (done) break;
-								controller.enqueue(value);
-							}
-						} catch (error) {
-							console.error('Stream error:', error);
-							controller.error(error);
-						}
-					}
-				});
+			const result = await handleResponse(response, options, config.model, selectedProvider);
 
-				return new Response(readable, {
-					headers: {
-						'Content-Type': 'text/event-stream',
-						'Cache-Control': 'no-cache',
-						'Connection': 'keep-alive',
-						'X-AI-Provider': selectedProvider,
-						...corsHeaders
-					}
-				});
-			} else {
-				// 非流式响应
-				const data = await response.json() as any;
-				console.log('Chat completion successful:', {
-					responseLength: JSON.stringify(data).length,
-					finishReason: data.choices?.[0]?.finish_reason
-				});
-
-				return new Response(JSON.stringify({
-					id: data.id || `chatcmpl-${Date.now()}`,
-					object: data.object || 'chat.completion',
-					created: data.created || Math.floor(Date.now() / 1000),
-					model: data.model || config.model,
-					choices: data.choices || [],
-					usage: data.usage || {
-						prompt_tokens: 0,
-						completion_tokens: 0,
-						total_tokens: 0
-					},
-					provider: selectedProvider
-				}), {
-					headers: {
-						'Content-Type': 'application/json',
-						'X-AI-Provider': selectedProvider,
-						...corsHeaders
-					}
-				});
-			}
+			return result;
 		} else {
 			throw new Error(`Unsupported provider: ${selectedProvider}`);
 		}
@@ -424,33 +203,105 @@ export default {
 			if (pathname === '/v1/chat/completions' || pathname === '/chat') {
 				// 只处理POST请求
 				if (method !== 'POST') {
-					return new Response('Method not allowed', { 
+					console.log('不支持的HTTP方法:', {
+						timestamp: new Date().toISOString(),
+						requestId: requestId,
+						method: method,
+						pathname: pathname
+					});
+					return new Response('Method not allowed', {
 						status: 405,
 						headers: corsHeaders
 					});
 				}
-
+				
 				let requestBody;
 				const contentType = request.headers.get('content-type') || '';
 				
+				console.log('解析请求体:', {
+					timestamp: new Date().toISOString(),
+					requestId: requestId,
+					contentType: contentType
+				});
+				
 				if (contentType.includes('application/json')) {
-					requestBody = await request.json();
+					try {
+						requestBody = await request.json();
+						console.log('JSON请求体解析成功:', {
+							timestamp: new Date().toISOString(),
+							requestId: requestId,
+							messageCount: requestBody?.messages?.length || 0
+						});
+					} catch (parseError) {
+						console.error('JSON请求体解析失败:', {
+							timestamp: new Date().toISOString(),
+							requestId: requestId,
+							error: parseError instanceof Error ? parseError.message : String(parseError)
+						});
+						return new Response(JSON.stringify({
+							error: {
+								message: 'Invalid JSON in request body',
+								type: 'parse_error',
+								timestamp: new Date().toISOString(),
+								requestId: requestId
+							}
+						}), {
+							status: 400,
+							headers: {
+								'Content-Type': 'application/json',
+								...corsHeaders
+							}
+						});
+					}
 				} else if (contentType.includes('text/plain')) {
 					const text = await request.text();
 					try {
 						requestBody = JSON.parse(text);
-					} catch {
+						console.log('文本请求体解析成功:', {
+							timestamp: new Date().toISOString(),
+							requestId: requestId,
+							messageCount: requestBody?.messages?.length || 0
+						});
+					} catch (parseError) {
+						console.error('文本请求体解析失败:', {
+							timestamp: new Date().toISOString(),
+							requestId: requestId,
+							error: parseError instanceof Error ? parseError.message : String(parseError)
+						});
 						// 如果不是JSON，将其作为简单的prompt处理
 						requestBody = {
 							messages: [{ role: 'user', content: text }]
 						};
 					}
 				} else {
-					return new Response('Unsupported content type', {
+					console.log('不支持的请求类型:', {
+						timestamp: new Date().toISOString(),
+						requestId: requestId,
+						contentType: contentType
+					});
+					return new Response(JSON.stringify({
+						error: {
+							message: 'Unsupported content type',
+							type: 'unsupported_content_type',
+							timestamp: new Date().toISOString(),
+							requestId: requestId
+						}
+					}), {
 						status: 415,
-						headers: corsHeaders
+						headers: {
+							'Content-Type': 'application/json',
+							...corsHeaders
+						}
 					});
 				}
+
+				console.log('开始处理聊天请求:', {
+					timestamp: new Date().toISOString(),
+					requestId: requestId,
+					provider: requestBody?.provider || 'auto',
+					messageCount: requestBody?.messages?.length || 0,
+					model: requestBody?.model || 'default'
+				});
 
 				const response = await handleChatCompletion(requestBody, env);
 				
@@ -485,21 +336,96 @@ export default {
 				headers: corsHeaders
 			});
 
-		} catch (error) {
-			console.error('Worker error:', error);
-			
-			return new Response(JSON.stringify({
-				error: {
-					message: error instanceof Error ? error.message : 'Unknown error',
-					type: 'worker_error'
-				}
-			}), {
-				status: 500,
-				headers: {
-					'Content-Type': 'application/json',
-					...corsHeaders
-				}
-			});
-		}
+	} catch (error) {
+		const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+		console.error('Worker处理请求失败:', {
+			timestamp: new Date().toISOString(),
+			requestId: requestId,
+			error: error instanceof Error ? error.message : String(error),
+			errorType: error instanceof Error ? error.constructor.name : typeof error,
+			stack: error instanceof Error ? error.stack : undefined,
+			url: request.url,
+			method: request.method,
+			pathname: new URL(request.url).pathname
+		});
+		
+		return new Response(JSON.stringify({
+			error: {
+				message: error instanceof Error ? error.message : 'Unknown error',
+				type: 'worker_error',
+				timestamp: new Date().toISOString(),
+				requestId: requestId
+			}
+		}), {
+			status: 500,
+			headers: {
+				'Content-Type': 'application/json',
+				...corsHeaders
+			}
+		});
+	}
 	}
 };
+
+
+export async function handleResponse(response: Response, options: any, configModel: string, provider: string) {
+    if (options.stream) {
+        // 流式响应 - 直接转发SiliconFlow的流式响应
+        const reader = response.body?.getReader();
+        if (!reader) {
+            throw new Error('Response body is not readable');
+        }
+        const encoder = new TextEncoder();
+        const readable = new ReadableStream({
+            async start(controller) {
+                try {
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        controller.enqueue(value);
+                    }
+                } catch (error) {
+                    console.error('Stream error:', error);
+                    controller.error(error);
+                }
+            }
+        });
+
+        return new Response(readable, {
+            headers: {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Connection': 'keep-alive',
+                'X-AI-Provider': provider,
+                ...corsHeaders
+            }
+        });
+    } else {
+        // 非流式响应
+        const data = await response.json() as any;
+        console.log('Chat completion successful:', {
+            responseLength: JSON.stringify(data).length,
+            finishReason: data.choices?.[0]?.finish_reason
+        });
+
+        return new Response(JSON.stringify({
+            id: data.id || `chatcmpl-${Date.now()}`,
+            object: data.object || 'chat.completion',
+            created: data.created || Math.floor(Date.now() / 1000),
+            model: data.model || configModel,
+            choices: data.choices || [],
+            usage: data.usage || {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0
+            },
+            provider: provider
+        }), {
+            headers: {
+                'Content-Type': 'application/json',
+                'X-AI-Provider': provider,
+                ...corsHeaders
+            }
+        });
+    }
+}
