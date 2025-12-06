@@ -8,9 +8,7 @@
 		"enabled": true
 	},
 	"vars": {
-		"ZHIPU_API_KEY": "your_zhipu_api_key_here",
 		"ZAI_MODEL": "glm-4.6",
-		"SILICONFLOW_API_KEY": "your_siliconflow_api_key_here",
 		"SILICONFLOW_MODEL": "Qwen/Qwen2.5-7B-Instruct"
 	}
 }
