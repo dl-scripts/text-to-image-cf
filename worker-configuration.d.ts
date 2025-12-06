@@ -10,7 +10,7 @@ declare namespace Cloudflare {
         ZAI_MODEL: string;
         SILICONFLOW_API_KEY?: string;
         SILICONFLOW_MODEL: string;
-        
+        AI_CACHE: D1Database;
 	}
 }
 interface Env extends Cloudflare.Env {}
