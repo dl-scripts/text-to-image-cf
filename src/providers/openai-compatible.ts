@@ -1,0 +1,38 @@
+import { AIProviderConfig, ChatMessage } from '../types';
+
+// 调用OpenAI兼容API (SiliconFlow/DeepSeek/NIM)
+export async function callOpenAICompatible(
+	config: AIProviderConfig,
+	messages: ChatMessage[],
+	options: { stream?: boolean; temperature?: number; max_tokens?: number } = {}
+): Promise<Response> {
+	if (!config.apiKey) {
+		throw new Error(`API key not configured for ${config.name}`);
+	}
+
+	const defaultMaxTokens = config.name === 'deepseek' ? 8192 : 99000;
+	
+	const response = await fetch(config.baseURL, {
+		method: 'POST',
+		headers: {
+			'Authorization': `Bearer ${config.apiKey}`,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			model: config.model,
+			messages: messages,
+			stream: options.stream || false,
+			temperature: options.temperature ?? 0.1,
+			max_tokens: options.max_tokens ?? defaultMaxTokens
+		})
+	});
+
+	if (!response.ok) {
+		const errorData = await response.json() as any;
+		const error = new Error(errorData.error?.message || `API request failed for ${config.name}`) as any;
+		error.status = response.status;
+		throw error;
+	}
+
+	return response;
+}

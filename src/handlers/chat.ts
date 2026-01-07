@@ -1,0 +1,301 @@
+import { ChatRequest, Env } from '../types';
+import { corsHeaders, getProviderFromRequest, getProviderConfig } from '../config';
+import { callZhipuAI } from '../providers/zhipu';
+import { callOpenAICompatible } from '../providers/openai-compatible';
+
+// Handle chat completion requests
+export async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise<Response> {
+	let selectedProvider;
+	let hasRetried = false;
+	try {
+		const messages = requestBody.messages || [];
+		
+		// 获取要使用的provider
+		selectedProvider = getProviderFromRequest(requestBody);
+		const config = getProviderConfig(selectedProvider, env);
+		
+
+		const messageData: any = {
+			messageCount: messages.length,
+			provider: selectedProvider,
+			model: config.model
+		}
+		for (let index = 0; index < messages.length; index++) {
+			const element = messages[index];
+			messageData['message_' + index] = element;
+		}
+
+		console.log('Chat completion request:', messageData);
+
+		const options = {
+			stream: requestBody.stream ?? false,
+			temperature: requestBody.temperature,
+			max_tokens: requestBody.max_tokens
+		};
+
+		if (selectedProvider === 'zhipu') {
+			// 使用智谱AI SDK
+			let response;
+			try {
+				response = await callZhipuAI(config, messages, options);
+			} catch (apiError: any) {
+				// 如果是5xx错误，使用nim重试
+				if (apiError.status && apiError.status >= 500 && apiError.status < 600) {
+					console.log(`zhipu returned ${apiError.status} error, retrying with nim...`);
+					hasRetried = true;
+					const nimConfig = getProviderConfig('nim', env);
+					selectedProvider = 'nim';
+					// nim使用callOpenAICompatible
+					const nimResponse = await callOpenAICompatible(nimConfig, messages, options);
+					
+					if (options.stream) {
+						// 流式响应
+						const reader = nimResponse.body?.getReader();
+						if (!reader) {
+							throw new Error('Response body is not readable');
+						}
+						const readable = new ReadableStream({
+							async start(controller) {
+								try {
+									while (true) {
+										const { done, value } = await reader.read();
+										if (done) break;
+										controller.enqueue(value);
+									}
+								} catch (error) {
+									console.error('Stream error:', error);
+									controller.error(error);
+								}
+							}
+						});
+
+						return new Response(readable, {
+							headers: {
+								'Content-Type': 'text/event-stream',
+								'Cache-Control': 'no-cache',
+								'Connection': 'keep-alive',
+								'X-AI-Provider': selectedProvider,
+								'X-Retried': 'true',
+								...corsHeaders
+							}
+						});
+					} else {
+						// 非流式响应
+						const data = await nimResponse.json() as any;
+						console.log('Chat completion successful (retried with nim):', {
+							responseLength: JSON.stringify(data).length,
+							finishReason: data.choices?.[0]?.finish_reason
+						});
+
+						return new Response(JSON.stringify({
+							id: data.id || `chatcmpl-${Date.now()}`,
+							object: data.object || 'chat.completion',
+							created: data.created || Math.floor(Date.now() / 1000),
+							model: data.model || nimConfig.model,
+							choices: data.choices || [],
+							usage: data.usage || {
+								prompt_tokens: 0,
+								completion_tokens: 0,
+								total_tokens: 0
+							},
+							provider: selectedProvider,
+							retried: true
+						}), {
+							headers: {
+								'Content-Type': 'application/json',
+								'X-AI-Provider': selectedProvider,
+								'X-Retried': 'true',
+								...corsHeaders
+							}
+						});
+					}
+				} else {
+					throw apiError;
+				}
+			}
+
+			if (options.stream) {
+				// 流式响应
+				const encoder = new TextEncoder();
+				const readable = new ReadableStream({
+					async start(controller) {
+						try {
+							for await (const chunk of response) {
+								const content = chunk.choices[0]?.delta?.content || '';
+								if (content) {
+									controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+										choices: [{
+											delta: {
+												content: content
+											}
+										}]
+									})}\n\n`));
+								}
+							}
+							controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+						} catch (error) {
+							console.error('Stream error:', error);
+							controller.error(error);
+						}
+					}
+				});
+
+				return new Response(readable, {
+					headers: {
+						'Content-Type': 'text/event-stream',
+						'Cache-Control': 'no-cache',
+						'Connection': 'keep-alive',
+						'X-AI-Provider': selectedProvider,
+						...corsHeaders
+					}
+				});
+			} else {
+				// 非流式响应
+				const result = response as any;
+				const resultStr = JSON.stringify(result);
+				console.log('Chat completion successful:', {
+					responseLength: resultStr.length,
+					response: resultStr,
+					finishReason: result.choices?.[0]?.finish_reason,
+					retried: hasRetried
+				});
+
+				return new Response(JSON.stringify({
+					id: `chatcmpl-${Date.now()}`,
+					object: 'chat.completion',
+					created: Math.floor(Date.now() / 1000),
+					model: config.model,
+					choices: result.choices || [],
+					usage: result.usage || {
+						prompt_tokens: 0,
+						completion_tokens: 0,
+						total_tokens: 0
+					},
+					provider: selectedProvider,
+					retried: hasRetried
+				}), {
+					headers: {
+						'Content-Type': 'application/json',
+						'X-AI-Provider': selectedProvider,
+						'X-Retried': hasRetried ? 'true' : 'false',
+						...corsHeaders
+					}
+				});
+			}
+		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek' || selectedProvider === 'nim') {
+			// 使用SiliconFlow/DeepSeek/NIM API (OpenAI兼容)
+			let response;
+			try {
+				response = await callOpenAICompatible(config, messages, options);
+			} catch (apiError: any) {
+				// 如果是5xx错误且不是nim provider，使用nim重试
+				if (apiError.status && apiError.status >= 500 && apiError.status < 600 && selectedProvider !== 'nim') {
+					console.log(`${selectedProvider} returned ${apiError.status} error, retrying with nim...`);
+					hasRetried = true;
+					const nimConfig = getProviderConfig('nim', env);
+					selectedProvider = 'nim';
+					response = await callOpenAICompatible(nimConfig, messages, options);
+				} else {
+					throw apiError;
+				}
+			}
+
+			if (options.stream) {
+				// 流式响应 - 直接转发OpenAI兼容的流式响应
+				const reader = response.body?.getReader();
+				if (!reader) {
+					throw new Error('Response body is not readable');
+				}
+				const encoder = new TextEncoder();
+				const readable = new ReadableStream({
+					async start(controller) {
+						try {
+							while (true) {
+								const { done, value } = await reader.read();
+								if (done) break;
+								controller.enqueue(value);
+							}
+						} catch (error) {
+							console.error('Stream error:', error);
+							controller.error(error);
+						}
+					}
+				});
+
+				return new Response(readable, {
+					headers: {
+						'Content-Type': 'text/event-stream',
+						'Cache-Control': 'no-cache',
+						'Connection': 'keep-alive',
+						'X-AI-Provider': selectedProvider,
+						...corsHeaders
+					}
+				});
+			} else {
+				// 非流式响应
+				const data = await response.json() as any;
+				console.log('Chat completion successful:', {
+					responseLength: JSON.stringify(data).length,
+					finishReason: data.choices?.[0]?.finish_reason,
+					retried: hasRetried
+				});
+
+				return new Response(JSON.stringify({
+					id: data.id || `chatcmpl-${Date.now()}`,
+					object: data.object || 'chat.completion',
+					created: data.created || Math.floor(Date.now() / 1000),
+					model: data.model || config.model,
+					choices: data.choices || [],
+					usage: data.usage || {
+						prompt_tokens: 0,
+						completion_tokens: 0,
+						total_tokens: 0
+					},
+					provider: selectedProvider,
+					retried: hasRetried
+				}), {
+					headers: {
+						'Content-Type': 'application/json',
+						'X-AI-Provider': selectedProvider,
+						'X-Retried': hasRetried ? 'true' : 'false',
+						...corsHeaders
+					}
+				});
+			}
+		} else {
+			throw new Error(`Unsupported provider: ${selectedProvider}`);
+		}
+
+	} catch (error) {
+		console.error('! Chat completion error:', error);
+		
+		let errorMessage = 'Unknown error occurred';
+		if (error instanceof Error) {
+			errorMessage = error.message;
+		}
+		
+		// 检查是否是API密钥错误
+		if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('invalid api_key')) {
+			errorMessage = 'AI服务暂时不可用，请检查API密钥配置';
+		} else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+			errorMessage = '请求频率过高，请稍后重试';
+		} else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
+			errorMessage = '网络请求超时，请稍后重试';
+		}
+
+		return new Response(JSON.stringify({
+			error: {
+				message: errorMessage,
+				type: 'chat_completion_error',
+				suggestion: '请检查输入内容或稍后重试',
+				selectedProvider: selectedProvider,
+			}
+		}), {
+			status: 500,
+			headers: {
+				'Content-Type': 'application/json',
+				...corsHeaders
+			}
+		});
+	}
+}
