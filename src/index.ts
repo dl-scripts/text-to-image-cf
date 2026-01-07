@@ -179,6 +179,8 @@ async function callOpenAI(
 		throw new Error(`API key not configured for ${config.name}`);
 	}
 
+	const defaultMaxTokens = config.name === 'deepseek' ? 8192 : 99000;
+	
 	const response = await fetch(config.baseURL, {
 		method: 'POST',
 		headers: {
@@ -190,7 +192,7 @@ async function callOpenAI(
 			messages: messages,
 			stream: options.stream || false,
 			temperature: options.temperature ?? 0.1,
-			max_tokens: options.max_tokens ?? 99000
+			max_tokens: options.max_tokens ?? defaultMaxTokens
 		})
 	});
 
