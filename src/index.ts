@@ -34,7 +34,7 @@ interface ChatRequest {
 }
 
 // 定义AI提供商类型
-type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek';
+type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim';
 
 // 定义AI提供商配置
 interface AIProviderConfig {
@@ -51,7 +51,7 @@ function getProviderFromRequest(request: ChatRequest): AIProvider {
 	// 检查请求中是否有provider参数
 	if (request.provider) {
 		const provider = request.provider.toLowerCase();
-		if (provider === 'zhipu' || provider === 'siliconflow' || provider === 'deepseek' ) {
+		if (provider === 'zhipu' || provider === 'siliconflow' || provider === 'deepseek' || provider === 'nim') {
 			return provider as AIProvider;
 		}
 	}
@@ -62,12 +62,12 @@ function getProviderFromRequest(request: ChatRequest): AIProvider {
 	)?.content?.split('provider=')[1]?.trim();
 	
 	// 如果指定了provider参数，使用指定的provider
-	if (providerParam === 'zhipu' || providerParam === 'siliconflow' || providerParam === 'deepseek') {
+	if (providerParam === 'zhipu' || providerParam === 'siliconflow' || providerParam === 'deepseek' || providerParam === 'nim') {
 		return providerParam as AIProvider;
 	}
 	
 	// 否则随机选择一个provider
-	const providers: AIProvider[] = ['zhipu', 'siliconflow', 'deepseek'];
+	const providers: AIProvider[] = ['zhipu', 'siliconflow', 'deepseek', 'nim', 'nim'];
 	const randomIndex = Math.floor(Math.random() * providers.length);
 	return providers[randomIndex];
 }
@@ -98,6 +98,13 @@ function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
 				model: 'deepseek-chat',
 				baseURL: 'https://api.deepseek.com/chat/completions'
 			};
+		case 'nim':
+			return {
+				name: 'nim',
+				apiKey: env.NVIDIA_API_KEY || '',
+				model: env.NVIDIA_MODEL || 'deepseek-ai/deepseek-v3.1-terminus',
+				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
+			};
 		default:
 			return {
 				name: 'deepseek',
@@ -121,8 +128,8 @@ async function callZhipuAI(
 	return await client.createCompletions({
 		model: config.model,
 		messages: messages,
-		temperature: options.temperature ?? 0.3,
-		maxTokens: options.max_tokens ?? 4000,
+		temperature: options.temperature ?? 0.1,
+		maxTokens: options.max_tokens ?? 99000,
 		stream: options.stream ?? false
 	});
 }
@@ -182,8 +189,8 @@ async function callOpenAI(
 			model: config.model,
 			messages: messages,
 			stream: options.stream || false,
-			temperature: options.temperature ?? 0.7,
-			max_tokens: options.max_tokens ?? 4000
+			temperature: options.temperature ?? 0.1,
+			max_tokens: options.max_tokens ?? 99000
 		})
 	});
 
@@ -293,8 +300,8 @@ async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise
 					}
 				});
 			}
-		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek') {
-			// 使用SiliconFlow API (OpenAI兼容)
+		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek' || selectedProvider === 'nim') {
+			// 使用SiliconFlow/DeepSeek/NIM API (OpenAI兼容)
 			const response = await callOpenAI(config, messages, options);
 
 			if (options.stream) {

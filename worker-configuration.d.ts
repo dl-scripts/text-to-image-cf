@@ -12,6 +12,8 @@ declare namespace Cloudflare {
         SILICONFLOW_EMBEDDING_MODEL?: string,
         SILICONFLOW_MODEL: string;
         DEEPSEEK_API_KEY?: string;
+        NVIDIA_API_KEY?: string;
+        NVIDIA_MODEL?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}
