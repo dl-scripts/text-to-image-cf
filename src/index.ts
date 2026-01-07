@@ -102,7 +102,7 @@ function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
 			return {
 				name: 'nim',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'deepseek-ai/deepseek-v3.1-terminus',
+				model: env.NVIDIA_MODEL || 'moonshotai/kimi-k2-instruct-0905',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
 		default:
