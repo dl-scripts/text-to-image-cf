@@ -38,8 +38,8 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 		console.log(`[Circuit Breaker] Requested provider ${selectedProvider} is unavailable, selecting alternative`);
 	}
 	
-	// 随机选择一个可用的provider
-	const allProviders: AIProvider[] = ['zhipu', 'siliconflow', 'deepseek', 'nim', 'nim'];
+	// 随机选择一个可用的provider, remove siliconflow
+	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'nim', 'nim'];
 	const availableProviders = circuitBreaker.getAvailableProviders(allProviders);
 	
 	if (availableProviders.length === 0) {
