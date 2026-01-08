@@ -91,7 +91,7 @@ console.log(state);
 // 输出: { state: 'OPEN', failureCount: 3, canExecute: false }
 
 // 获取所有可用的providers
-const available = circuitBreaker.getAvailableProviders(['zhipu', 'siliconflow', 'deepseek', 'nim']);
+const available = circuitBreaker.getAvailableProviders(['zhipu', 'siliconflow', 'deepseek', 'nim' , 'nim2']);
 ```
 
 ## 优势

@@ -48,14 +48,14 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				
 				// 如果是5xx错误，使用nim重试
 				if (apiError.status && apiError.status >= 500 && apiError.status < 600) {
-					console.log(`zhipu returned ${apiError.status} error, retrying with nim...`);
+					console.log(`zhipu returned ${apiError.status} error, retrying with nim2...`);
 					hasRetried = true;
-					const nimConfig = getProviderConfig('nim', env);
-					selectedProvider = 'nim';
+					const nimConfig = getProviderConfig('nim2', env);
+					selectedProvider = 'nim2';
 					// nim使用callOpenAICompatible
 					try {
 						const nimResponse = await callOpenAICompatible(nimConfig, messages, options);
-						circuitBreaker.recordSuccess('nim');
+						circuitBreaker.recordSuccess('nim2');
 						
 						if (options.stream) {
 						// 流式响应
@@ -91,7 +91,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					} else {
 						// 非流式响应
 						const data = await nimResponse.json() as any;
-						console.log('Chat completion successful (retried with nim):', {
+						console.log('Chat completion successful (retried with nim2):', {
 							responseLength: JSON.stringify(data).length,
 							finishReason: data.choices?.[0]?.finish_reason
 						});
@@ -119,7 +119,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 						});
 					}
 					} catch (nimError: any) {
-						circuitBreaker.recordFailure('nim', nimError);
+						circuitBreaker.recordFailure('nim2', nimError);
 						throw nimError;
 					}
 				} else {
@@ -195,7 +195,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					}
 				});
 			}
-		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek' || selectedProvider === 'nim') {
+		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek' || selectedProvider === 'nim' || selectedProvider === 'nim2') {
 			// 使用SiliconFlow/DeepSeek/NIM API (OpenAI兼容)
 			let response;
 			const originalProvider = selectedProvider;
@@ -208,16 +208,16 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
 				// 如果是5xx错误且不是nim provider，使用nim重试
-				if (apiError.status && apiError.status >= 500 && apiError.status < 600 && selectedProvider !== 'nim') {
+				if (apiError.status && apiError.status >= 500 && apiError.status < 600 && selectedProvider !== 'nim2') {
 					console.log(`${selectedProvider} returned ${apiError.status} error, retrying with nim...`);
 					hasRetried = true;
-					const nimConfig = getProviderConfig('nim', env);
-					selectedProvider = 'nim';
+					const nimConfig = getProviderConfig('nim2', env);
+					selectedProvider = 'nim2';
 					try {
 						response = await callOpenAICompatible(nimConfig, messages, options);
-						circuitBreaker.recordSuccess('nim');
+						circuitBreaker.recordSuccess('nim2');
 					} catch (nimError: any) {
-						circuitBreaker.recordFailure('nim', nimError);
+						circuitBreaker.recordFailure('nim2', nimError);
 						throw nimError;
 					}
 				} else {

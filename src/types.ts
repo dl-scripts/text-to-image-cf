@@ -14,7 +14,7 @@ export interface ChatRequest {
 	max_tokens?: number;
 }
 
-export type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim';
+export type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim' | 'nim2';
 
 export interface AIProviderConfig {
 	name: AIProvider;
