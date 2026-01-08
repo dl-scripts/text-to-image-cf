@@ -1,5 +1,5 @@
 import { ChatRequest, Env } from '../types';
-import { corsHeaders, getProviderFromRequest, getProviderConfig } from '../config';
+import { corsHeaders, getProviderFromRequest, getProviderConfig, getAlternativeProvider } from '../config';
 import { callZhipuAI } from '../providers/zhipu';
 import { callOpenAICompatible } from '../providers/openai-compatible';
 import { circuitBreaker } from '../circuit-breaker';
@@ -46,20 +46,21 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-				// 如果是5xx错误或超时，使用nim重试
-				if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
-					console.log(`zhipu returned ${apiError.status || 'timeout'} error, retrying with nim2...`);
-					hasRetried = true;
-					const nimConfig = getProviderConfig('nim2', env);
-					selectedProvider = 'nim2';
-					// nim使用callOpenAICompatible
-					try {
-						const nimResponse = await callOpenAICompatible(nimConfig, messages, options);
-						circuitBreaker.recordSuccess('nim2');
+// 如果�?xx错误或超时，切换到另一个provider重试
+			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
+				const retryProvider = getAlternativeProvider(originalProvider);
+				console.log(`${originalProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
+				hasRetried = true;
+				const retryConfig = getProviderConfig(retryProvider, env);
+				selectedProvider = retryProvider;
+				// 备用provider使用callOpenAICompatible
+				try {
+					const retryResponse = await callOpenAICompatible(retryConfig, messages, options);
+					circuitBreaker.recordSuccess(retryProvider);
 						
 						if (options.stream) {
 						// 流式响应
-						const reader = nimResponse.body?.getReader();
+						const reader = retryResponse.body?.getReader();
 						if (!reader) {
 							throw new Error('Response body is not readable');
 						}
@@ -89,9 +90,9 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 							}
 						});
 					} else {
-						// 非流式响应
-						const data = await nimResponse.json() as any;
-						console.log('Chat completion successful (retried with nim2):', {
+						// 非流式响�?
+						const data = await retryResponse.json() as any;
+						console.log(`Chat completion successful (retried with ${retryProvider}):`, {
 							responseLength: JSON.stringify(data).length,
 							finishReason: data.choices?.[0]?.finish_reason
 						});
@@ -100,7 +101,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 							id: data.id || `chatcmpl-${Date.now()}`,
 							object: data.object || 'chat.completion',
 							created: data.created || Math.floor(Date.now() / 1000),
-							model: data.model || nimConfig.model,
+							model: data.model || retryConfig.model,
 							choices: data.choices || [],
 							usage: data.usage || {
 								prompt_tokens: 0,
@@ -118,9 +119,9 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 							}
 						});
 					}
-					} catch (nimError: any) {
-						circuitBreaker.recordFailure('nim2', nimError);
-						throw nimError;
+					} catch (retryError: any) {
+						circuitBreaker.recordFailure(retryProvider, retryError);
+						throw retryError;
 					}
 				} else {
 					throw apiError;
@@ -163,7 +164,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					}
 				});
 			} else {
-				// 非流式响应
+				// 非流式响�?
 				const result = response as any;
 				const resultStr = JSON.stringify(result);
 				console.log('Chat completion successful:', {
@@ -207,18 +208,19 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-				// 如果是5xx错误或超时且不是nim provider，使用nim重试
-				if (((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) && selectedProvider !== 'nim2') {
-					console.log(`${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with nim...`);
-					hasRetried = true;
-					const nimConfig = getProviderConfig('nim2', env);
-					selectedProvider = 'nim2';
-					try {
-						response = await callOpenAICompatible(nimConfig, messages, options);
-						circuitBreaker.recordSuccess('nim2');
-					} catch (nimError: any) {
-						circuitBreaker.recordFailure('nim2', nimError);
-						throw nimError;
+			// 如果�?xx错误或超时，切换到另一个provider重试
+			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
+				const retryProvider = getAlternativeProvider(originalProvider);
+				console.log(`${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
+				hasRetried = true;
+				const retryConfig = getProviderConfig(retryProvider, env);
+				selectedProvider = retryProvider;
+				try {
+					response = await callOpenAICompatible(retryConfig, messages, options);
+					circuitBreaker.recordSuccess(retryProvider);
+				} catch (retryError: any) {
+					circuitBreaker.recordFailure(retryProvider, retryError);
+					throw retryError;
 					}
 				} else {
 					throw apiError;
@@ -226,7 +228,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			}
 
 			if (options.stream) {
-				// 流式响应 - 直接转发OpenAI兼容的流式响应
+				// 流式响应 - 直接转发OpenAI兼容的流式响�?
 				const reader = response.body?.getReader();
 				if (!reader) {
 					throw new Error('Response body is not readable');
@@ -257,7 +259,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					}
 				});
 			} else {
-				// 非流式响应
+				// 非流式响�?
 				const data = await response.json() as any;
 				console.log('Chat completion successful:', {
 					responseLength: JSON.stringify(data).length,

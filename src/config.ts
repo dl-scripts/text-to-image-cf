@@ -8,6 +8,25 @@ export const corsHeaders = {
 	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
+// 获取一个与当前provider不同的备用provider
+export function getAlternativeProvider(currentProvider: AIProvider): AIProvider {
+	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'siliconflow', 'nim', 'nim2'];
+	// 过滤掉当前provider
+	const otherProviders = allProviders.filter(p => p !== currentProvider);
+	// 获取可用的provider
+	const availableProviders = circuitBreaker.getAvailableProviders(otherProviders);
+	
+	if (availableProviders.length === 0) {
+		// 如果没有其他可用provider，返回列表中第一个不同的provider
+		console.warn(`[Retry] No alternative providers available, using ${otherProviders[0]} as fallback`);
+		return otherProviders[0];
+	}
+	
+	// 随机选择一个可用的备用provider
+	const randomIndex = Math.floor(Math.random() * availableProviders.length);
+	return availableProviders[randomIndex];
+}
+
 // 获取请求中的provider参数，如果没有指定则随机选择
 export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	// 检查请求中是否有provider参数
