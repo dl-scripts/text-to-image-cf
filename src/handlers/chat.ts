@@ -46,9 +46,9 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-				// 如果是5xx错误，使用nim重试
-				if (apiError.status && apiError.status >= 500 && apiError.status < 600) {
-					console.log(`zhipu returned ${apiError.status} error, retrying with nim2...`);
+				// 如果是5xx错误或超时，使用nim重试
+				if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
+					console.log(`zhipu returned ${apiError.status || 'timeout'} error, retrying with nim2...`);
 					hasRetried = true;
 					const nimConfig = getProviderConfig('nim2', env);
 					selectedProvider = 'nim2';
@@ -207,9 +207,9 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-				// 如果是5xx错误且不是nim provider，使用nim重试
-				if (apiError.status && apiError.status >= 500 && apiError.status < 600 && selectedProvider !== 'nim2') {
-					console.log(`${selectedProvider} returned ${apiError.status} error, retrying with nim...`);
+				// 如果是5xx错误或超时且不是nim provider，使用nim重试
+				if (((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) && selectedProvider !== 'nim2') {
+					console.log(`${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with nim...`);
 					hasRetried = true;
 					const nimConfig = getProviderConfig('nim2', env);
 					selectedProvider = 'nim2';

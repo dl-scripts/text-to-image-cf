@@ -1,4 +1,5 @@
 import { AIProviderConfig, ChatMessage } from '../types';
+import { fetchWithTimeout } from '../utils';
 
 // 调用OpenAI兼容API (SiliconFlow/DeepSeek/NIM)
 export async function callOpenAICompatible(
@@ -12,7 +13,7 @@ export async function callOpenAICompatible(
 
 	const defaultMaxTokens = config.name === 'deepseek' ? 8192 : 99000;
 	
-	const response = await fetch(config.baseURL, {
+	const response = await fetchWithTimeout(config.baseURL, {
 		method: 'POST',
 		headers: {
 			'Authorization': `Bearer ${config.apiKey}`,
@@ -25,7 +26,7 @@ export async function callOpenAICompatible(
 			temperature: options.temperature ?? 0.1,
 			max_tokens: options.max_tokens ?? defaultMaxTokens
 		})
-	});
+	}, 7000); // 10秒超时
 
 	if (!response.ok) {
 		const errorData = await response.json() as any;

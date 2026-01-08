@@ -1,4 +1,5 @@
 import { AIProviderConfig } from '../types';
+import { fetchWithTimeout } from '../utils';
 
 export async function createEmbedding(config: AIProviderConfig, input: string) {
 	let dimensions = 1024;
@@ -26,7 +27,7 @@ export async function createEmbedding(config: AIProviderConfig, input: string) {
 		})
 	};
 
-	const response = await fetch(config.embeddingURL!, options);
+	const response = await fetchWithTimeout(config.embeddingURL!, options, 7000); // 10秒超时
 	if (!response.ok) {
 		const errorData = await response.json() as any;
 		throw new Error(errorData.error?.message || `API request failed for ${config.name}`);
