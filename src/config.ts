@@ -39,7 +39,7 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	}
 	
 	// 随机选择一个可用的provider, remove siliconflow
-	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'nim', 'nim2'];
+	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'siliconflow', 'nim', 'nim2'];
 	const availableProviders = circuitBreaker.getAvailableProviders(allProviders);
 	
 	if (availableProviders.length === 0) {
