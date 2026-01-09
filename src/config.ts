@@ -115,7 +115,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'openrouter',
 				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'deepseek/deepseek-r1',
+				model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};            
 		default:
