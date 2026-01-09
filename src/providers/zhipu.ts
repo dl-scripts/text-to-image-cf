@@ -16,7 +16,7 @@ export async function callZhipuAI(
 			model: config.model,
 			messages: messages,
 			temperature: options.temperature ?? 0.1,
-			maxTokens: options.max_tokens ?? 99000,
+			maxTokens: options.max_tokens ?? 8192,
 			stream: options.stream ?? false
 		});
 	} catch (error: any) {
