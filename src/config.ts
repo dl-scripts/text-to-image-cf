@@ -101,7 +101,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'nim',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'moonshotai/kimi-k2-instruct-0905',
+				model: env.NVIDIA_MODEL || 'qwen/qwen3-next-80b-a3b-instruct',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
         case 'nim2':
