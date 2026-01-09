@@ -14,7 +14,7 @@ export interface ChatRequest {
 	max_tokens?: number;
 }
 
-export type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim' | 'nim2';
+export type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim' | 'nim2' | 'openrouter';
 
 export interface AIProviderConfig {
 	name: AIProvider;
@@ -34,4 +34,6 @@ export interface Env {
 	DEEPSEEK_API_KEY: string;
 	NVIDIA_API_KEY: string;
 	NVIDIA_MODEL: string;
+	OPENROUTER_API_KEY: string;
+	OPENROUTER_MODEL: string;
 }

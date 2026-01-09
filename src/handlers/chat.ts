@@ -196,8 +196,8 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					}
 				});
 			}
-		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek' || selectedProvider === 'nim' || selectedProvider === 'nim2') {
-			// 使用SiliconFlow/DeepSeek/NIM API (OpenAI兼容)
+		} else if (selectedProvider === 'siliconflow' || selectedProvider === 'deepseek' || selectedProvider === 'nim' || selectedProvider === 'nim2' || selectedProvider === 'openrouter') {
+			// 使用SiliconFlow/DeepSeek/NIM/OpenRouter API (OpenAI兼容)
 			let response;
 			const originalProvider = selectedProvider;
 			try {
