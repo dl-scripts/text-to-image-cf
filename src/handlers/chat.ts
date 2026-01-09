@@ -1,8 +1,9 @@
-import { ChatRequest, Env } from '../types';
+import { ChatRequest, Env, ChatMessage } from '../types';
 import { corsHeaders, getProviderFromRequest, getProviderConfig, getAlternativeProvider } from '../config';
 import { callZhipuAI } from '../providers/zhipu';
 import { callOpenAICompatible } from '../providers/openai-compatible';
 import { circuitBreaker } from '../circuit-breaker';
+import { getErrorMessage, getSystemPrompt } from '../prompts';
 
 // Handle chat completion requests
 export async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise<Response> {
@@ -11,18 +12,83 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 	try {
 		const messages = requestBody.messages || [];
 		
+		// 查找用户请求中的系统提示词
+		const userSystemMessage = messages.find(msg => msg.role === 'system');
+		const nonSystemMessages = messages.filter(msg => msg.role !== 'system');
+		
+		// 检测是否是特殊格式的翻译提示词（如 Immersive Translate、Twitter 翻译等）
+		const isSpecialFormat = userSystemMessage?.content && (
+			userSystemMessage.content.includes('{{') ||  // 模板变量
+			userSystemMessage.content.includes('YAML') ||
+			userSystemMessage.content.includes('yaml') ||
+			userSystemMessage.content.includes('Twitter') ||
+			userSystemMessage.content.includes('hashtags') ||
+			userSystemMessage.content.includes('@mentions') ||
+			userSystemMessage.content.includes('imt_source_field') ||
+			userSystemMessage.content.includes('Immersive')
+		);
+		
+		let processedMessages: ChatMessage[];
+		
+		if (isSpecialFormat && userSystemMessage) {
+			// 智能增强：保留原有格式提示词，在前面添加专业背景
+			const enhancementPrompt = `# Expert Translation Guidelines
+
+You are a senior tech professional with 15+ years in FinTech and AI. When translating:
+
+## Core Principles (CRITICAL):
+1. **Keep ALL technical terms in English** - Don't translate: API, LLM, FinTech, blockchain, DeFi, AI, ML, RAG, microservices, cloud-native, etc.
+2. **Sound human, not robotic** - Write like a native speaker talking to colleagues, not a translation machine
+3. **Natural Chinese flow** - Break long sentences, avoid passive voice overload, use active and direct expressions
+4. **Kill the "translation smell"** - Eliminate patterns like "这个...那个...", "进行...的操作", "在...方面"
+
+## Anti-Patterns to AVOID:
+❌ 机器学习模型 → ✅ ML 模型
+❌ 大型语言模型 → ✅ LLM 
+❌ 金融科技 → ✅ FinTech
+❌ 应用程序接口 → ✅ API
+❌ "这个系统可以进行数据处理" → ✅ "系统能处理数据"
+❌ "在性能方面有所提升" → ✅ "性能更好了"
+❌ "对于这个问题..." → ✅ "这个问题..."
+
+## Style:
+- Like a tech veteran chatting with peers at a coffee break
+- Professional but approachable, not academic or stiff
+- Short, punchy sentences over long, complex ones
+- Use common expressions, not formal/literary Chinese
+
+---
+
+`;
+			processedMessages = [
+				{ role: 'system', content: enhancementPrompt + userSystemMessage.content },
+				...nonSystemMessages
+			];
+			
+			console.log('Using enhanced special format system prompt');
+		} else {
+			// 完全替换：使用应用的默认系统提示词
+			const systemPrompt = getSystemPrompt('default');
+			processedMessages = [
+				{ role: 'system', content: systemPrompt },
+				...nonSystemMessages
+			];
+			
+			console.log('Using app default system prompt');
+		}
+		
 		// 获取要使用的provider
 		selectedProvider = getProviderFromRequest(requestBody);
 		const config = getProviderConfig(selectedProvider, env);
 		
 
 		const messageData: any = {
-			messageCount: messages.length,
+			messageCount: processedMessages.length,
 			provider: selectedProvider,
 			model: config.model
 		}
-		for (let index = 0; index < messages.length; index++) {
-			const element = messages[index];
+		for (let index = 0; index < processedMessages.length; index++) {
+			const element = processedMessages[index];
 			messageData['message_' + index] = element;
 		}
 
@@ -39,7 +105,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			let response;
 			const originalProvider = selectedProvider;
 			try {
-				response = await callZhipuAI(config, messages, options);
+				response = await callZhipuAI(config, processedMessages, options);
 				// 记录成功
 				circuitBreaker.recordSuccess(originalProvider);
 			} catch (apiError: any) {
@@ -55,7 +121,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				selectedProvider = retryProvider;
 				// 备用provider使用callOpenAICompatible
 				try {
-					const retryResponse = await callOpenAICompatible(retryConfig, messages, options);
+					const retryResponse = await callOpenAICompatible(retryConfig, processedMessages, options);
 					circuitBreaker.recordSuccess(retryProvider);
 						
 						if (options.stream) {
@@ -201,7 +267,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			let response;
 			const originalProvider = selectedProvider;
 			try {
-				response = await callOpenAICompatible(config, messages, options);
+				response = await callOpenAICompatible(config, processedMessages, options);
 				// 记录成功
 				circuitBreaker.recordSuccess(originalProvider);
 			} catch (apiError: any) {
@@ -216,7 +282,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				const retryConfig = getProviderConfig(retryProvider, env);
 				selectedProvider = retryProvider;
 				try {
-					response = await callOpenAICompatible(retryConfig, messages, options);
+					response = await callOpenAICompatible(retryConfig, processedMessages, options);
 					circuitBreaker.recordSuccess(retryProvider);
 				} catch (retryError: any) {
 					circuitBreaker.recordFailure(retryProvider, retryError);
@@ -303,11 +369,15 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 		
 		// 检查是否是API密钥错误
 		if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('invalid api_key')) {
-			errorMessage = 'AI服务暂时不可用，请检查API密钥配置';
+			errorMessage = getErrorMessage('unauthorized');
 		} else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-			errorMessage = '请求频率过高，请稍后重试';
+			errorMessage = getErrorMessage('rateLimitExceeded');
 		} else if (errorMessage.includes('timeout') || errorMessage.includes('network')) {
-			errorMessage = '网络请求超时，请稍后重试';
+			errorMessage = getErrorMessage('timeout');
+		} else if (errorMessage.includes('Unsupported provider')) {
+			errorMessage = getErrorMessage('unsupportedProvider');
+		} else if (errorMessage.includes('500') || errorMessage.includes('502') || errorMessage.includes('503')) {
+			errorMessage = getErrorMessage('serverError');
 		}
 
 		return new Response(JSON.stringify({
