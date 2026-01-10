@@ -1,10 +1,9 @@
-// 请求批处理器 - 合并同一requestId的请求，节省token
+// 请求批处理器 - 自动合并所有请求，节省token
 
 import { ChatRequest, ChatMessage } from './types';
 import { batchConfig } from './config';
 
 interface BatchedRequest {
-	requestId: string;
 	userMessages: string[];
 	originalRequests: Array<{
 		messages: ChatMessage[];
@@ -21,14 +20,13 @@ interface BatchedRequest {
 }
 
 class RequestBatcher {
-	private batches: Map<string, BatchedRequest> = new Map();
+	private batch: BatchedRequest | null = null;
 	private batchDelay: number = batchConfig.delay; // 从配置读取延迟时间
 
 	/**
 	 * 添加请求到批处理队列
 	 */
 	async addRequest(
-		requestId: string,
 		requestBody: ChatRequest,
 		handler: (mergedRequest: ChatRequest) => Promise<Response>
 	): Promise<Response> {
@@ -38,16 +36,12 @@ class RequestBatcher {
 		}
 
 		return new Promise((resolve, reject) => {
-			let batch = this.batches.get(requestId);
-
-			if (!batch) {
+			if (!this.batch) {
 				// 创建新的批处理
-				batch = {
-					requestId,
+				this.batch = {
 					userMessages: [],
 					originalRequests: [],
 				};
-				this.batches.set(requestId, batch);
 			}
 
 			// 提取用户消息和系统消息
@@ -55,17 +49,17 @@ class RequestBatcher {
 			const userMessages = requestBody.messages.filter(msg => msg.role === 'user');
 
 			// 保存系统消息（第一个请求的系统消息）
-			if (!batch.systemMessage && systemMessage) {
-				batch.systemMessage = systemMessage;
+			if (!this.batch.systemMessage && systemMessage) {
+				this.batch.systemMessage = systemMessage;
 			}
 
 			// 添加用户消息
 			userMessages.forEach(msg => {
-				batch!.userMessages.push(msg.content);
+				this.batch!.userMessages.push(msg.content);
 			});
 
 			// 保存原始请求信息
-			batch.originalRequests.push({
+			this.batch.originalRequests.push({
 				messages: requestBody.messages,
 				options: {
 					stream: requestBody.stream,
@@ -77,23 +71,23 @@ class RequestBatcher {
 			});
 
 			// 检查批次大小限制
-			if (batch.originalRequests.length >= batchConfig.maxBatchSize) {
+			if (this.batch.originalRequests.length >= batchConfig.maxBatchSize) {
 				// 达到最大批次大小，立即处理
-				if (batch.timer) {
-					clearTimeout(batch.timer);
+				if (this.batch.timer) {
+					clearTimeout(this.batch.timer);
 				}
-				this.processBatch(requestId, handler);
+				this.processBatch(handler);
 				return;
 			}
 
 			// 清除旧的定时器
-			if (batch.timer) {
-				clearTimeout(batch.timer);
+			if (this.batch.timer) {
+				clearTimeout(this.batch.timer);
 			}
 
 			// 设置新的定时器
-			batch.timer = setTimeout(() => {
-				this.processBatch(requestId, handler);
+			this.batch.timer = setTimeout(() => {
+				this.processBatch(handler);
 			}, this.batchDelay) as any;
 		});
 	}
@@ -102,16 +96,15 @@ class RequestBatcher {
 	 * 处理批量请求
 	 */
 	private async processBatch(
-		requestId: string,
 		handler: (mergedRequest: ChatRequest) => Promise<Response>
 	): Promise<void> {
-		const batch = this.batches.get(requestId);
+		const batch = this.batch;
 		if (!batch || batch.originalRequests.length === 0) {
 			return;
 		}
 
-		// 从批处理队列中移除
-		this.batches.delete(requestId);
+		// 清空当前批处理
+		this.batch = null;
 
 		try {
 			// 如果只有一个请求，直接处理
@@ -130,7 +123,7 @@ class RequestBatcher {
 			}
 
 			// 合并多个请求
-		console.log(`[Batch] Processing ${batch.originalRequests.length} requests for requestId: ${requestId}`);
+		console.log(`[Batch] Processing ${batch.originalRequests.length} requests`);
 
 		// 智能合并消息内容 - 提取公共指令前缀
 		let commonPrefix = '';
@@ -196,7 +189,7 @@ class RequestBatcher {
 			const response = await handler(mergedRequest);
 			const responseData = await response.json() as any;
 
-// 拆分响应（使用两个或更多换行符+分隔符的模式）
+			// 拆分响应（使用两个或更多换行符+分隔符的模式）
 		const content = responseData.choices?.[0]?.message?.content || '';
 		const parts = content.split(/\n{2,}---\n{2,}/);
 
@@ -242,10 +235,10 @@ class RequestBatcher {
 				);
 			});
 
-			console.log(`Batch processed successfully: ${batch.originalRequests.length} requests merged`);
+			console.log(`[Batch] Successfully merged ${batch.originalRequests.length} requests`);
 		} catch (error) {
 			// 如果批处理失败，拒绝所有请求
-			console.error('Batch processing failed:', error);
+			console.error('[Batch] Processing failed:', error);
 			batch.originalRequests.forEach(request => {
 				request.reject(error instanceof Error ? error : new Error('Batch processing failed'));
 			});
@@ -253,15 +246,13 @@ class RequestBatcher {
 	}
 
 	/**
-	 * 清理过期的批处理
+	 * 清理批处理
 	 */
 	cleanup(): void {
-		for (const [requestId, batch] of this.batches.entries()) {
-			if (batch.timer) {
-				clearTimeout(batch.timer);
-			}
-			this.batches.delete(requestId);
+		if (this.batch?.timer) {
+			clearTimeout(this.batch.timer);
 		}
+		this.batch = null;
 	}
 }
 

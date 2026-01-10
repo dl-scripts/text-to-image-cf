@@ -53,15 +53,7 @@ export default {
 					});
 				}
 
-				// 提取requestId用于批处理
-				// 优先从header获取，其次从请求体metadata获取
-				const requestId = request.headers.get('x-request-id') || 
-					request.headers.get('cf-ray') ||
-					requestBody.metadata?.requestId ||
-					requestBody.requestId ||
-					crypto.randomUUID();
-
-				console.log('Processing request:', { requestId, hasUserMessages: requestBody.messages?.some((m: any) => m.role === 'user') });
+				console.log('[Request] Processing chat completion');
 
 				// 检查是否启用批处理（可通过header控制）
 				const enableBatching = request.headers.get('x-enable-batching') !== 'false';
@@ -71,7 +63,6 @@ export default {
 				if (enableBatching && requestBody.messages?.some((m: any) => m.role === 'user')) {
 					// 使用批处理器
 					response = await requestBatcher.addRequest(
-						requestId,
 						requestBody,
 						async (mergedRequest) => {
 							return await handleChatCompletion(mergedRequest, env);

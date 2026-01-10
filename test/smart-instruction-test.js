@@ -1,10 +1,10 @@
 /**
  * 测试智能指令提取功能
  * 验证批处理时是否能正确提取公共翻译指令
+ * 注意：所有请求会自动合并批处理，不需要 requestId
  */
 
 const WORKER_URL = 'http://localhost:8787/v1/chat/completions';
-const REQUEST_ID = `test-instruction-${Date.now()}`;
 
 async function sendRequest(content, index) {
 	const requestBody = {
@@ -16,7 +16,6 @@ async function sendRequest(content, index) {
 			},
 		],
 		stream: false,
-		requestId: REQUEST_ID,
 	};
 
 	console.log(`\n[Request ${index}] Sending...`);
@@ -26,7 +25,6 @@ async function sendRequest(content, index) {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			'X-Request-Id': REQUEST_ID,
 		},
 		body: JSON.stringify(requestBody),
 	});
@@ -44,8 +42,7 @@ async function sendRequest(content, index) {
 
 async function main() {
 	console.log('=== 智能指令提取测试 ===\n');
-	console.log('Test ID:', REQUEST_ID);
-	console.log('预期行为：批处理时只保留一个"翻译为简体中文"指令，用 --- 分隔各个内容\n');
+	console.log('预期行为：所有请求自动合并批处理，只保留一个"翻译为简体中文"指令，用 --- 分隔各个内容\n');
 
 	const contents = [
 		'Firefox DevTools hide unreferenced CSS variables | Stefan Judis Web Development',
