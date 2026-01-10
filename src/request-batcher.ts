@@ -130,51 +130,51 @@ class RequestBatcher {
 			}
 
 			// 合并多个请求
-		console.log(`[Batch] Processing ${batch.originalRequests.length} requests`);
+			console.log(`[Batch] Processing ${batch.originalRequests.length} requests`);
 
-		// 智能合并消息内容 - 提取公共指令前缀
-		let commonPrefix = '';
-		const contents: string[] = [];
-		
-		batch.userMessages.forEach((message, index) => {
-			// 尝试检测指令前缀（通常在第一行，以"："或":"结尾）
-			const lines = message.split('\n');
-			const firstLine = lines[0]?.trim() || '';
+			// 智能合并消息内容 - 提取公共指令前缀
+			let commonPrefix = '';
+			const contents: string[] = [];
 			
-			// 检测是否是翻译指令（包含"翻译"、"translate"等关键词，并以冒号结尾）
-			const isInstruction = /^(翻译|translate|转换|convert|改写|rewrite).*[：:]\s*$/i.test(firstLine);
+			batch.userMessages.forEach((message, index) => {
+				// 尝试检测指令前缀（通常在第一行，以"："或":"结尾）
+				const lines = message.split('\n');
+				const firstLine = lines[0]?.trim() || '';
+				
+				// 检测是否是翻译指令（包含"翻译"、"translate"等关键词，并以冒号结尾）
+				const isInstruction = /^(翻译|translate|转换|convert|改写|rewrite).*[：:]\s*$/i.test(firstLine);
+				
+				if (isInstruction && index === 0) {
+					// 第一个消息，保存指令作为公共前缀
+					commonPrefix = firstLine;
+					// 提取真正的内容（去掉第一行和可能的空行）
+					const content = lines.slice(1).join('\n').trim();
+					contents.push(content);
+					console.log(`[Batch] Detected instruction prefix: "${commonPrefix}"`);
+				} else if (isInstruction && commonPrefix) {
+					// 后续消息也有相同类型的指令，只提取内容
+					const content = lines.slice(1).join('\n').trim();
+					contents.push(content);
+				} else {
+					// 没有指令前缀，直接使用完整消息
+					contents.push(message);
+				}
+			});
 			
-			if (isInstruction && index === 0) {
-				// 第一个消息，保存指令作为公共前缀
-				commonPrefix = firstLine;
-				// 提取真正的内容（去掉第一行和可能的空行）
-				const content = lines.slice(1).join('\n').trim();
-				contents.push(content);
-				console.log(`[Batch] Detected instruction prefix: "${commonPrefix}"`);
-			} else if (isInstruction && commonPrefix) {
-				// 后续消息也有相同类型的指令，只提取内容
-				const content = lines.slice(1).join('\n').trim();
-				contents.push(content);
+			// 构建合并后的内容
+			let mergedContent: string;
+			if (commonPrefix) {
+				// 有公共指令：指令 + 换行 + 内容1 + 分隔符 + 内容2 + ...
+				mergedContent = commonPrefix + '\n\n' + contents.join('\n\n---\n\n');
+				console.log(`[Batch] Merged with common prefix, ${contents.length} content blocks`);
 			} else {
-				// 没有指令前缀，直接使用完整消息
-				contents.push(message);
+				// 没有公共指令，直接用分隔符连接
+				mergedContent = batch.userMessages.join('\n\n---\n\n');
+				console.log(`[Batch] Merged without prefix extraction`);
 			}
-		});
-		
-		// 构建合并后的内容
-		let mergedContent: string;
-		if (commonPrefix) {
-			// 有公共指令：指令 + 换行 + 内容1 + 分隔符 + 内容2 + ...
-			mergedContent = commonPrefix + '\n\n' + contents.join('\n\n---\n\n');
-			console.log(`[Batch] Merged with common prefix, ${contents.length} content blocks`);
-		} else {
-			// 没有公共指令，直接用分隔符连接
-			mergedContent = batch.userMessages.join('\n\n---\n\n');
-			console.log(`[Batch] Merged without prefix extraction`);
-		}
-		
-		console.log('[Batch] Creating merged messages array...');
-		const mergedMessages: ChatMessage[] = [];
+			
+			console.log('[Batch] Creating merged messages array...');
+			const mergedMessages: ChatMessage[] = [];
 
 			if (batch.systemMessage) {
 				mergedMessages.push(batch.systemMessage);
@@ -202,9 +202,9 @@ class RequestBatcher {
 			console.log('[Batch] Response parsed, content length:', responseData.choices?.[0]?.message?.content?.length);
 
 			// 拆分响应（使用两个或更多换行符+分隔符的模式）
-		const content = responseData.choices?.[0]?.message?.content || '';
-		const parts = content.split(/\n{2,}---\n{2,}/);
-		console.log('[Batch] Split response into', parts.length, 'parts for', batch.originalRequests.length, 'requests');
+			const content = responseData.choices?.[0]?.message?.content || '';
+			const parts = content.split(/\n{2,}---\n{2,}/);
+			console.log('[Batch] Split response into', parts.length, 'parts for', batch.originalRequests.length, 'requests');
 
 			// 为每个原始请求创建响应
 			batch.originalRequests.forEach((request, index) => {
