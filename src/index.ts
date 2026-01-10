@@ -2,9 +2,10 @@ import { Env } from './types';
 import { corsHeaders } from './config';
 import { handleChatCompletion } from './handlers/chat';
 import { handleEmbedding } from './handlers/embedding';
+import { requestBatcher } from './request-batcher';
 
 export default {
-	async fetch(request: Request, env: Env): Promise<Response> {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const startTime = Date.now();
 		
 		try {
@@ -52,7 +53,34 @@ export default {
 					});
 				}
 
-				const response = await handleChatCompletion(requestBody, env);
+				// 提取requestId用于批处理
+				// 优先从header获取，其次从请求体metadata获取
+				const requestId = request.headers.get('x-request-id') || 
+					request.headers.get('cf-ray') ||
+					requestBody.metadata?.requestId ||
+					requestBody.requestId ||
+					crypto.randomUUID();
+
+				console.log('Processing request:', { requestId, hasUserMessages: requestBody.messages?.some((m: any) => m.role === 'user') });
+
+				// 检查是否启用批处理（可通过header控制）
+				const enableBatching = request.headers.get('x-enable-batching') !== 'false';
+				
+				let response: Response;
+				
+				if (enableBatching && requestBody.messages?.some((m: any) => m.role === 'user')) {
+					// 使用批处理器
+					response = await requestBatcher.addRequest(
+						requestId,
+						requestBody,
+						async (mergedRequest) => {
+							return await handleChatCompletion(mergedRequest, env);
+						}
+					);
+				} else {
+					// 直接处理（系统消息或禁用批处理）
+					response = await handleChatCompletion(requestBody, env);
+				}
 				
 				// 添加性能日志
 				const duration = Date.now() - startTime;

@@ -12,6 +12,11 @@ export interface ChatRequest {
 	provider?: string;
 	temperature?: number;
 	max_tokens?: number;
+	requestId?: string;
+	metadata?: {
+		requestId?: string;
+		[key: string]: any;
+	};
 }
 
 export type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim' | 'nim2' | 'openrouter';

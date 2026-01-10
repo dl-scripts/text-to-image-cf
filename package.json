@@ -22,7 +22,9 @@
 		"cf-typegen": "wrangler types",
 		"check": "tsc && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
-		"dev": "wrangler dev"
+		"dev": "wrangler dev",
+		"test": "node test/multi-provider-test.js",
+		"test:batch": "node test/batching-test.js"
 	},
 	"dependencies": {
 		"openai": "^6.10.0",

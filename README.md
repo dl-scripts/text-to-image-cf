@@ -4,11 +4,13 @@
 
 ## 功能特性
 
-- 支持智谱AI和SiliconFlow两个AI提供商
-- 可以随机选择一个提供商
-- 可以通过请求参数指定特定提供商
+- 支持多个AI提供商（智谱AI、SiliconFlow、DeepSeek、NVIDIA NIM、OpenRouter）
+- 可以随机选择或指定特定提供商
 - 支持流式和非流式响应
 - OpenAI兼容的API接口
+- **智能请求批处理** - 自动合并同一来源的请求，节省token
+- 断路器保护机制
+- 自动故障切换
 
 ## API使用方法
 
@@ -93,6 +95,27 @@ cd test && node multi-provider-test.js
 
 ## 注意事项
 
-- 确保在Cloudflare Workers中正确配置了两个AI提供商的API密钥
-- 如果没有指定provider，系统会随机选择一个
+- 确保在Cloudflare Workers中正确配置了AI提供商的API密钥
+- 如果没有指定provider，系统会随机选择一个可用的提供商
 - provider字段优先级高于消息中的provider参数
+
+## 请求批处理功能
+
+为了节省 token 并提高效率，系统支持智能请求批处理。来自同一来源（相同 requestId）的多个请求会在 300ms 内自动合并处理。
+
+### 使用方法
+
+在请求中添加 `X-Request-Id` header：
+
+```bash
+curl -X POST https://your-worker.workers.dev/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "X-Request-Id: article-12345" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "翻译：Hello"}
+    ]
+  }'
+```
+
+更多详细信息请参考 [批处理功能指南](BATCHING_GUIDE.md)

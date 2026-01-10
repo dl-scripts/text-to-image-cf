@@ -5,7 +5,14 @@ import { circuitBreaker } from './circuit-breaker';
 export const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+	'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id, X-Enable-Batching',
+};
+
+// 批处理配置
+export const batchConfig = {
+	enabled: true, // 是否启用批处理
+	delay: 300, // 批处理延迟（毫秒）
+	maxBatchSize: 10, // 单个批次最大请求数
 };
 
 // 获取一个与当前provider不同的备用provider
