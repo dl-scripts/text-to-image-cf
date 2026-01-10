@@ -28,7 +28,8 @@ class RequestBatcher {
 	 */
 	async addRequest(
 		requestBody: ChatRequest,
-		handler: (mergedRequest: ChatRequest) => Promise<Response>
+		handler: (mergedRequest: ChatRequest) => Promise<Response>,
+		ctx?: ExecutionContext
 	): Promise<Response> {
 		// 如果批处理未启用，直接处理
 		if (!batchConfig.enabled) {
@@ -90,9 +91,13 @@ class RequestBatcher {
 
 			// 设置新的定时器
 			this.batch.timer = setTimeout(() => {
-				this.processBatch(handler).catch(error => {
+				const batchPromise = this.processBatch(handler).catch(error => {
 					console.error('[Batch] Failed to process batch:', error);
 				});
+				// 使用 waitUntil 保持批处理活跃，即使原始请求超时
+				if (ctx) {
+					ctx.waitUntil(batchPromise);
+				}
 			}, this.batchDelay) as any;
 		});
 	}

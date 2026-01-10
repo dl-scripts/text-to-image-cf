@@ -66,7 +66,8 @@ export default {
 						requestBody,
 						async (mergedRequest) => {
 							return await handleChatCompletion(mergedRequest, env);
-						}
+						},
+						ctx
 					);
 				} else {
 					// 直接处理（系统消息或禁用批处理）
