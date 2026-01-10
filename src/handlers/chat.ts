@@ -11,93 +11,14 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 	let hasRetried = false;
 	try {
 		const messages = requestBody.messages || [];
-		
-		// 查找用户请求中的系统提示词
-		const userSystemMessage = messages.find(msg => msg.role === 'system');
 		const nonSystemMessages = messages.filter(msg => msg.role !== 'system');
 		
-		// 检测是否是特殊格式的翻译提示词（如 Immersive Translate、Twitter 翻译等）
-		const isSpecialFormat = userSystemMessage?.content && (
-			userSystemMessage.content.includes('{{') ||  // 模板变量
-			userSystemMessage.content.includes('YAML') ||
-			userSystemMessage.content.includes('yaml') ||
-			userSystemMessage.content.includes('Twitter') ||
-			userSystemMessage.content.includes('hashtags') ||
-			userSystemMessage.content.includes('@mentions') ||
-			userSystemMessage.content.includes('imt_source_field') ||
-			userSystemMessage.content.includes('Immersive')
-		);
-		
-		let processedMessages: ChatMessage[];
-		
-		if (isSpecialFormat && userSystemMessage) {
-			// 智能增强：保留原有格式提示词，在前面添加专业背景
-			const enhancementPrompt = `# Translation Philosophy
-
-You are a tech professional with 15+ years in FinTech and AI, devoted reader of intellectual magazines like 三联生活周刊. Your writing embodies the composure and restraint of intellectual journalism.
-
-## Core Principles:
-
-1. **Technical terms stay in English**
-   API, LLM, agent, FinTech, blockchain, DeFi, AI, ML, RAG, microservices, cloud-native, PostgreSQL, pattern, workflow — these have precise boundaries, no need to Sinicize
-
-2. **Pacing with composure**
-   - Mix long and short sentences; expand when needed, condense when appropriate
-   - Don't force brevity; sometimes a longer sentence tells the story better
-   - Natural pauses where readers need to breathe
-   - Transitions: "再比如", "与此同时", "所幸" (not just "然后")
-
-3. **Details matter**
-   "versioned" = 按版本, "proven" = 经过验证, "deep" = 深入
-   Numbers, time, places — specifics form the skeleton of good writing
-   Don't be vague where precision serves the reader
-
-4. **Restrained tone**
-   ❌ "超级厉害" → ✅ "颇具价值"
-   ❌ "非常牛" → ✅ "值得注意"
-   Let facts speak. No hyperbole, no sensationalism
-   But not cold either — warmth where it belongs
-
-5. **Dissolve translation smell, retain texture**
-   ❌ "为...提供" → ✅ "给..." or "让...有了"
-   ❌ "AI 代理" → ✅ "AI agent"
-   ❌ "该工具能够实现" → ✅ "这工具能" or "工具做到了"
-   
-   Avoid bureaucratic stiffness: 该、进行、方面、对于、而言、从而
-   But don't overcorrect — formal register has its place
-
-6. **Chinese logic**
-   English "A fixes B by doing C" becomes:
-   "A 解决了 B，方法是 C"
-   "A 做到了这点：C，于是 B 迎刃而解"
-   Follow Chinese thought patterns, not English syntax
-
-7. **Natural flow**
-   Not always "因此", "从而"
-   Sometimes "于是", "结果", "所幸", "与此同时"
-   Transitions should flow, not clunk
-
-**Tone**: Professional yet warm, precise yet human. Like someone who understands both technology and humanities. Not translating — retelling a story in Chinese.
-
----
-
-`;
-			processedMessages = [
-				{ role: 'system', content: enhancementPrompt + userSystemMessage.content },
-				...nonSystemMessages
-			];
-			
-			console.log('Using enhanced special format system prompt');
-		} else {
-			// 完全替换：使用应用的默认系统提示词
-			const systemPrompt = getSystemPrompt('default');
-			processedMessages = [
-				{ role: 'system', content: systemPrompt },
-				...nonSystemMessages
-			];
-			
-			console.log('Using app default system prompt');
-		}
+		// 使用默认系统提示词
+		const systemPrompt = getSystemPrompt('default');
+		const processedMessages: ChatMessage[] = [
+			{ role: 'system', content: systemPrompt },
+			...nonSystemMessages
+		];
 		
 		// 获取要使用的provider
 		selectedProvider = getProviderFromRequest(requestBody);
