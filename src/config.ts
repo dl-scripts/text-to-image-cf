@@ -5,15 +5,8 @@ import { circuitBreaker } from './circuit-breaker';
 export const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id, X-Enable-Batching',
-	'Access-Control-Expose-Headers': 'X-Batched, X-Batch-Size, X-AI-Provider, X-Retried',
-};
-
-// 批处理配置
-export const batchConfig = {
-	enabled: true, // 是否启用批处理
-	delay: 0, // 批处理延迟（毫秒）- 设为0立即处理，避免请求超时
-	maxBatchSize: 5, // 单个批次最大请求数
+	'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id',
+	'Access-Control-Expose-Headers': 'X-AI-Provider, X-Retried',
 };
 
 // 获取一个与当前provider不同的备用provider

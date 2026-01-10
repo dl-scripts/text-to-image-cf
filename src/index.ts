@@ -2,7 +2,6 @@ import { Env } from './types';
 import { corsHeaders } from './config';
 import { handleChatCompletion } from './handlers/chat';
 import { handleEmbedding } from './handlers/embedding';
-import { requestBatcher } from './request-batcher';
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -55,26 +54,8 @@ export default {
 
 				console.log('[Request] Processing chat completion');
 
-				// 检查是否启用批处理（可通过header控制）
-				const enableBatching = request.headers.get('x-enable-batching') !== 'false';
-				
-				let response: Response;
-				
-				if (enableBatching && requestBody.messages?.some((m: any) => m.role === 'user')) {
-					// 使用批处理器
-					response = await requestBatcher.addRequest(
-						requestBody,
-						async (mergedRequest) => {
-							return await handleChatCompletion(mergedRequest, env);
-						},
-						ctx
-					);
-				} else {
-					// 直接处理（系统消息或禁用批处理）
-					response = await handleChatCompletion(requestBody, env);
-				}
-				
-				// 添加性能日志
+			// 直接处理请求
+			const response = await handleChatCompletion(requestBody, env);
 				const duration = Date.now() - startTime;
 				console.log('Request processed:', {
 					path: pathname,
