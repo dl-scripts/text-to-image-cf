@@ -6,6 +6,7 @@ export const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 	'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id, X-Enable-Batching',
+	'Access-Control-Expose-Headers': 'X-Batched, X-Batch-Size, X-AI-Provider, X-Retried',
 };
 
 // 批处理配置

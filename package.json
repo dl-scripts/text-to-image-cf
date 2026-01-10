@@ -24,7 +24,11 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"test": "node test/multi-provider-test.js",
-		"test:batch": "node test/batching-test.js"
+		"test:batch": "node test/batching-test.js",
+		"test:diagnostic": "node test/batching-diagnostic.js",
+		"test:translation": "node test/batching-translation-test.js",
+		"test:instruction": "node test/smart-instruction-test.js",
+		"check:batch": "node test/check-batch-config.js"
 	},
 	"dependencies": {
 		"openai": "^6.10.0",
