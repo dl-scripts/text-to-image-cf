@@ -28,6 +28,7 @@
 		"test:diagnostic": "node test/batching-diagnostic.js",
 		"test:translation": "node test/batching-translation-test.js",
 		"test:instruction": "node test/smart-instruction-test.js",
+		"test:response": "node test/batch-response-test.js",
 		"check:batch": "node test/check-batch-config.js"
 	},
 	"dependencies": {

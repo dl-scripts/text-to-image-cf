@@ -76,7 +76,10 @@ class RequestBatcher {
 				if (this.batch.timer) {
 					clearTimeout(this.batch.timer);
 				}
-				this.processBatch(handler);
+				// 不等待 processBatch 完成，让它异步执行
+				this.processBatch(handler).catch(error => {
+					console.error('[Batch] Failed to process batch:', error);
+				});
 				return;
 			}
 
@@ -87,7 +90,9 @@ class RequestBatcher {
 
 			// 设置新的定时器
 			this.batch.timer = setTimeout(() => {
-				this.processBatch(handler);
+				this.processBatch(handler).catch(error => {
+					console.error('[Batch] Failed to process batch:', error);
+				});
 			}, this.batchDelay) as any;
 		});
 	}
@@ -99,7 +104,9 @@ class RequestBatcher {
 		handler: (mergedRequest: ChatRequest) => Promise<Response>
 	): Promise<void> {
 		const batch = this.batch;
+		console.log('[Batch] processBatch called, batch:', batch ? `${batch.originalRequests.length} requests` : 'null');
 		if (!batch || batch.originalRequests.length === 0) {
+			console.log('[Batch] No batch to process, returning');
 			return;
 		}
 
@@ -165,7 +172,9 @@ class RequestBatcher {
 			mergedContent = batch.userMessages.join('\n\n---\n\n');
 			console.log(`[Batch] Merged without prefix extraction`);
 		}
-			const mergedMessages: ChatMessage[] = [];
+		
+		console.log('[Batch] Creating merged messages array...');
+		const mergedMessages: ChatMessage[] = [];
 
 			if (batch.systemMessage) {
 				mergedMessages.push(batch.systemMessage);
@@ -186,12 +195,16 @@ class RequestBatcher {
 			};
 
 			// 发送合并后的请求
+			console.log('[Batch] Sending merged request to handler...');
 			const response = await handler(mergedRequest);
+			console.log('[Batch] Got response from handler, status:', response.status);
 			const responseData = await response.json() as any;
+			console.log('[Batch] Response parsed, content length:', responseData.choices?.[0]?.message?.content?.length);
 
 			// 拆分响应（使用两个或更多换行符+分隔符的模式）
 		const content = responseData.choices?.[0]?.message?.content || '';
 		const parts = content.split(/\n{2,}---\n{2,}/);
+		console.log('[Batch] Split response into', parts.length, 'parts for', batch.originalRequests.length, 'requests');
 
 			// 为每个原始请求创建响应
 			batch.originalRequests.forEach((request, index) => {
@@ -223,6 +236,7 @@ class RequestBatcher {
 					batchSize: batch.originalRequests.length,
 				};
 
+				console.log(`[Batch] Resolving request ${index + 1}/${batch.originalRequests.length}`);
 				request.resolve(
 					new Response(JSON.stringify(individualResponse), {
 						status: 200,
