@@ -20,7 +20,7 @@ export async function calculateHash(message: string): Promise<string> {
 export async function fetchWithTimeout(
 	url: string,
 	options: RequestInit = {},
-	timeout: number = 4000
+	timeout: number = 3500
 ): Promise<Response> {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeout);

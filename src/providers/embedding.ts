@@ -27,7 +27,7 @@ export async function createEmbedding(config: AIProviderConfig, input: string) {
 		})
 	};
 
-	const response = await fetchWithTimeout(config.embeddingURL!, options, 4000); // 6秒超时
+	const response = await fetchWithTimeout(config.embeddingURL!, options, 3500); // 6秒超时
 	if (!response.ok) {
 		const errorData = await response.json() as any;
 		throw new Error(errorData.error?.message || `API request failed for ${config.name}`);

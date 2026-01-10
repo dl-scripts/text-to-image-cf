@@ -11,7 +11,7 @@ export async function callOpenAICompatible(
 		throw new Error(`API key not configured for ${config.name}`);
 	}
 
-	const defaultMaxTokens = config.name === 'deepseek' ? 8192 : 8192;
+	const defaultMaxTokens = 8192;
 	
 	const response = await fetchWithTimeout(config.baseURL, {
 		method: 'POST',
@@ -23,10 +23,10 @@ export async function callOpenAICompatible(
 			model: config.model,
 			messages: messages,
 			stream: options.stream || false,
-			temperature: options.temperature ?? 0.1,
+			temperature: options.temperature ?? 0.7,
 			max_tokens: options.max_tokens ?? defaultMaxTokens
 		})
-	}, 4000); // 5秒超时
+	}, 3500); // 5秒超时
 
 	if (!response.ok) {
 		const errorData = await response.json() as any;

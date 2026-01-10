@@ -15,7 +15,7 @@ export async function callZhipuAI(
 		return await client.createCompletions({
 			model: config.model,
 			messages: messages,
-			temperature: options.temperature ?? 0.1,
+			temperature: options.temperature ?? 0.7,
 			maxTokens: options.max_tokens ?? 8192,
 			stream: options.stream ?? false
 		});
