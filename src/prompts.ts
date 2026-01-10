@@ -105,7 +105,3 @@ export const SUCCESS_MESSAGES = {
   providerSwitched: (fromProvider: string, toProvider: string) => 
     `已从 ${fromProvider} 切换到 ${toProvider}`,
 } as const;
-/
-export function getErrorMessage(errorType: keyof typeof ERROR_MESSAGES, customMessage?: string): string {
-  return customMessage || ERROR_MESSAGES[errorType] || '未知错误';
-}

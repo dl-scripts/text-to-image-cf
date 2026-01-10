@@ -55,7 +55,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-// 如果�?xx错误或超时，切换到另一个provider重试
+// 如果5xx错误或超时，切换到另一个provider重试
 			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
 				const retryProvider = getAlternativeProvider(originalProvider);
 				console.log(`${originalProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
@@ -217,7 +217,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-			// 如果�?xx错误或超时，切换到另一个provider重试
+			// 如果5xx错误或超时，切换到另一个provider重试
 			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
 				const retryProvider = getAlternativeProvider(originalProvider);
 				console.log(`${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
