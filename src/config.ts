@@ -12,8 +12,8 @@ export const corsHeaders = {
 // 批处理配置
 export const batchConfig = {
 	enabled: true, // 是否启用批处理
-	delay: 300, // 批处理延迟（毫秒）
-	maxBatchSize: 10, // 单个批次最大请求数
+	delay: 0, // 批处理延迟（毫秒）- 设为0立即处理，避免请求超时
+	maxBatchSize: 5, // 单个批次最大请求数
 };
 
 // 获取一个与当前provider不同的备用provider
