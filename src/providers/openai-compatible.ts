@@ -26,7 +26,7 @@ export async function callOpenAICompatible(
 			temperature: options.temperature ?? 0.7,
 			max_tokens: options.max_tokens ?? defaultMaxTokens
 		})
-	}, 3500); // 5秒超时
+	}, 6500); // 5秒超时
 
 	if (!response.ok) {
 		const errorData = await response.json() as any;
