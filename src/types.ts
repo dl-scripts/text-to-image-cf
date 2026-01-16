@@ -42,3 +42,57 @@ export interface Env {
 	OPENROUTER_API_KEY: string;
 	OPENROUTER_MODEL: string;
 }
+
+// Responses API types
+export interface ResponseMessage {
+	role: 'system' | 'user' | 'assistant';
+	content: string;
+}
+
+export interface JSONSchemaProperty {
+	type: string;
+	description?: string;
+	minLength?: number;
+	maxLength?: number;
+	minimum?: number;
+	maximum?: number;
+	enum?: any[];
+	items?: JSONSchemaProperty;
+	properties?: Record<string, JSONSchemaProperty>;
+	required?: string[];
+	additionalProperties?: boolean;
+}
+
+export interface JSONSchemaFormat {
+	type: 'json_schema';
+	name?: string;
+	strict?: boolean;
+	schema: JSONSchemaProperty;
+}
+
+export interface ResponseTextFormat {
+	format?: JSONSchemaFormat;
+}
+
+export interface ResponseRequest {
+	model?: string;
+	input: string | ResponseMessage[];
+	text?: ResponseTextFormat;
+	provider?: string;
+	temperature?: number;
+	max_tokens?: number;
+}
+
+export interface ResponseOutput {
+	id: string;
+	object: 'response';
+	created: number;
+	model: string;
+	content: string;
+	usage?: {
+		input_tokens: number;
+		output_tokens: number;
+		total_tokens: number;
+	};
+	provider?: string;
+}

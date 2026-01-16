@@ -2,6 +2,7 @@ import { Env } from './types';
 import { corsHeaders } from './config';
 import { handleChatCompletion } from './handlers/chat';
 import { handleEmbedding } from './handlers/embedding';
+import { handleResponseAPI } from './handlers/responses';
 
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -100,7 +101,42 @@ export default {
 				
 				return response;
 			}
+			// 处理 Responses API
+			if (pathname === '/v1/responses' || pathname === '/responses') {
+				// 只处理POST请求
+				if (method !== 'POST') {
+					return new Response('Method not allowed for responses', { 
+						status: 405,
+						headers: corsHeaders
+					});
+				}
 
+				let requestBody;
+				const contentType = request.headers.get('content-type') || '';
+				
+				if (contentType.includes('application/json')) {
+					requestBody = await request.json();
+				} else {
+					return new Response('Unsupported content type for responses', {
+						status: 415,
+						headers: corsHeaders
+					});
+				}
+
+				console.log('[Request] Processing Responses API');
+
+				const response = await handleResponseAPI(requestBody as any, env);
+				
+				// 添加性能日志
+				const duration = Date.now() - startTime;
+				console.log('Responses API Request processed:', {
+					path: pathname,
+					duration: duration,
+					timestamp: new Date().toISOString()
+				});
+				
+				return response;
+			}
 
 			// 旧版兼容性 - 重定向到新的聊天API
 			if (pathname.startsWith('/api/ai/')) {

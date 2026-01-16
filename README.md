@@ -8,13 +8,16 @@
 - 可以随机选择或指定特定提供商
 - 支持流式和非流式响应
 - OpenAI兼容的API接口
+- **支持Responses API** - OpenAI的新一代结构化输出API
 - **智能请求批处理** - 自动合并同一来源的请求，节省token
 - 断路器保护机制
 - 自动故障切换
 
 ## API使用方法
 
-### 基本请求
+### Chat Completions API (传统API)
+
+#### 基本请求
 
 ```bash
 curl -X POST https://your-worker-domain.workers.dev/v1/chat/completions \
@@ -50,6 +53,138 @@ curl -X POST https://your-worker-domain.workers.dev/v1/chat/completions \
     ],
     "provider": "siliconflow"
   }'
+```
+
+### Responses API (结构化输出)
+
+OpenAI的新一代Responses API提供了更强大的结构化输出功能，使用JSON Schema来确保输出符合预定义的结构。
+
+#### 基本用法
+
+```bash
+curl -X POST https://your-worker-domain.workers.dev/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "glm-4-flashx",
+    "input": "Jane, 54 years old",
+    "text": {
+      "format": {
+        "type": "json_schema",
+        "name": "person",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "age": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 130
+            }
+          },
+          "required": ["name", "age"],
+          "additionalProperties": false
+        }
+      }
+    }
+  }'
+```
+
+#### 使用消息数组
+
+```bash
+curl -X POST https://your-worker-domain.workers.dev/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "glm-4-flashx",
+    "input": [
+      {
+        "role": "system",
+        "content": "You are a helpful math tutor. Guide the user through the solution step by step."
+      },
+      {
+        "role": "user",
+        "content": "how can I solve 8x + 7 = -23"
+      }
+    ],
+    "text": {
+      "format": {
+        "type": "json_schema",
+        "name": "math_reasoning",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "explanation": { "type": "string" },
+                  "output": { "type": "string" }
+                },
+                "required": ["explanation", "output"],
+                "additionalProperties": false
+              }
+            },
+            "final_answer": { "type": "string" }
+          },
+          "required": ["steps", "final_answer"],
+          "additionalProperties": false
+        },
+        "strict": true
+      }
+    }
+  }'
+```
+
+#### 指定Provider
+
+```bash
+curl -X POST https://your-worker-domain.workers.dev/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "deepseek-chat",
+    "provider": "deepseek",
+    "input": "Extract information from: John Doe, age 35, software engineer",
+    "text": {
+      "format": {
+        "type": "json_schema",
+        "name": "person_info",
+        "strict": true,
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "age": { "type": "number" },
+            "occupation": { "type": "string" }
+          },
+          "required": ["name", "age", "occupation"],
+          "additionalProperties": false
+        }
+      }
+    }
+  }'
+```
+
+#### Responses API响应格式
+
+```json
+{
+  "id": "resp-1234567890",
+  "object": "response",
+  "created": 1699564200,
+  "model": "glm-4-flashx",
+  "content": "{\"name\": \"Jane\", \"age\": 54}",
+  "usage": {
+    "input_tokens": 50,
+    "output_tokens": 25,
+    "total_tokens": 75
+  },
+  "provider": "zhipu"
+}
 ```
 
 ### 在消息中指定提供商
