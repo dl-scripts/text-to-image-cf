@@ -62,6 +62,11 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 			model: config.model,
 			hasFormat: !!requestBody.text?.format
 		});
+		console.log('=== 完整请求体 ===');
+		console.log(JSON.stringify(requestBody, null, 2));
+		console.log('=== 处理后的消息 ===');
+		console.log(JSON.stringify(messages, null, 2));
+		console.log('==================');
 
 		const options = {
 			stream: false, // Responses API 不支持流式响应
@@ -106,6 +111,15 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 		}
 
 		// 直接返回后台原始响应
+		console.log('=== 后台完整响应 ===');
+		console.log(JSON.stringify(apiResponse, null, 2));
+		console.log('===================');
+		console.log('Responses API successful:', {
+			responseLength: JSON.stringify(apiResponse).length,
+			hasFormat: !!requestBody.text?.format,
+			retried: hasRetried
+		});
+		
 		return new Response(JSON.stringify(apiResponse), {
 			headers: {
 				'Content-Type': 'application/json',
