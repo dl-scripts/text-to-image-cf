@@ -145,6 +145,9 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 			hasFormat: !!requestBody.text?.format,
 			retried: hasRetried
 		});
+		console.log('=== 完整 Response API Response ===');
+		console.log(JSON.stringify(responseOutput, null, 2));
+		console.log('===================================');
 
 		return new Response(JSON.stringify(responseOutput), {
 			headers: {

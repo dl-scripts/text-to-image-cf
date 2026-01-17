@@ -183,7 +183,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					retried: hasRetried
 				});
 
-				return new Response(JSON.stringify({
+				const completeResponse = {
 					id: `chatcmpl-${Date.now()}`,
 					object: 'chat.completion',
 					created: Math.floor(Date.now() / 1000),
@@ -196,7 +196,12 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					},
 					provider: selectedProvider,
 					retried: hasRetried
-				}), {
+				};
+				console.log('=== 完整 Chat Completion Response ===');
+				console.log(JSON.stringify(completeResponse, null, 2));
+				console.log('====================================');
+
+				return new Response(JSON.stringify(completeResponse), {
 					headers: {
 						'Content-Type': 'application/json',
 						'X-AI-Provider': selectedProvider,
@@ -276,7 +281,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					retried: hasRetried
 				});
 
-				return new Response(JSON.stringify({
+				const completeResponse = {
 					id: data.id || `chatcmpl-${Date.now()}`,
 					object: data.object || 'chat.completion',
 					created: data.created || Math.floor(Date.now() / 1000),
@@ -289,7 +294,12 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					},
 					provider: selectedProvider,
 					retried: hasRetried
-				}), {
+				};
+				console.log('=== 完整 Chat Completion Response ===');
+				console.log(JSON.stringify(completeResponse, null, 2));
+				console.log('====================================');
+
+				return new Response(JSON.stringify(completeResponse), {
 					headers: {
 						'Content-Type': 'application/json',
 						'X-AI-Provider': selectedProvider,
