@@ -105,51 +105,8 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 			}
 		}
 
-		// 提取内容 - 处理不同的响应格式
-		let content = '';
-		if (apiResponse.choices && apiResponse.choices[0]) {
-			// Chat Completions格式
-			content = apiResponse.choices[0].message?.content || '';
-		} else if (apiResponse.content) {
-			// 已经是Responses API格式
-			content = apiResponse.content;
-		}
-
-		// 如果有JSON schema格式要求，确保内容是有效的JSON
-		if (requestBody.text?.format && content) {
-			try {
-				// 验证JSON格式
-				JSON.parse(content);
-			} catch (e) {
-				console.warn('Response content is not valid JSON:', content);
-			}
-		}
-
-		// 构建Responses API响应格式
-		const responseOutput = {
-			id: `resp-${Date.now()}`,
-			object: 'response' as const,
-			created: Math.floor(Date.now() / 1000),
-			model: requestBody.model || config.model,
-			content: content,
-			usage: {
-				input_tokens: apiResponse.usage?.prompt_tokens || 0,
-				output_tokens: apiResponse.usage?.completion_tokens || 0,
-				total_tokens: apiResponse.usage?.total_tokens || 0
-			},
-			provider: selectedProvider
-		};
-
-		console.log('Responses API successful:', {
-			responseLength: content.length,
-			hasFormat: !!requestBody.text?.format,
-			retried: hasRetried
-		});
-		console.log('=== 完整 Response API Response ===');
-		console.log(JSON.stringify(responseOutput, null, 2));
-		console.log('===================================');
-
-		return new Response(JSON.stringify(responseOutput), {
+		// 直接返回后台原始响应
+		return new Response(JSON.stringify(apiResponse), {
 			headers: {
 				'Content-Type': 'application/json',
 				'X-AI-Provider': selectedProvider,

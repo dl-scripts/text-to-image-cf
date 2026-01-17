@@ -1,4 +1,4 @@
-﻿import { ChatRequest, Env, ChatMessage } from '../types';
+import { ChatRequest, Env, ChatMessage } from '../types';
 import { corsHeaders, getProviderFromRequest, getProviderConfig, getAlternativeProvider } from '../config';
 import { callZhipuAI } from '../providers/zhipu';
 import { callOpenAICompatible } from '../providers/openai-compatible';
@@ -55,7 +55,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-// 如果5xx错误或超时，切换到另一个provider重试
+			// 如果5xx错误或超时，切换到另一个provider重试
 			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
 				const retryProvider = getAlternativeProvider(originalProvider);
 				console.log(`${originalProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
@@ -99,7 +99,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 							}
 						});
 					} else {
-						// 非流式响�?
+						// 非流式响应
 						const data = await retryResponse.json() as any;
 						console.log(`Chat completion successful (retried with ${retryProvider}):`, {
 							responseLength: JSON.stringify(data).length,
@@ -173,7 +173,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					}
 				});
 			} else {
-				// 非流式响�?
+				// 非流式响应
 				const result = response as any;
 				const resultStr = JSON.stringify(result);
 				console.log('Chat completion successful:', {
@@ -242,7 +242,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			}
 
 			if (options.stream) {
-				// 流式响应 - 直接转发OpenAI兼容的流式响�?
+				// 流式响应 - 直接转发OpenAI兼容的流式
 				const reader = response.body?.getReader();
 				if (!reader) {
 					throw new Error('Response body is not readable');
@@ -273,7 +273,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					}
 				});
 			} else {
-				// 非流式响�?
+				// 非流式响应
 				const data = await response.json() as any;
 				console.log('Chat completion successful:', {
 					responseLength: JSON.stringify(data).length,
