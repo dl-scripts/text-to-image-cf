@@ -37,11 +37,27 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 
 		console.log('[Chat] [步骤1] Chat completion request:', messageData);
 
-		const options = {
+		// 构造请求选项
+		const options: any = {
 			stream: requestBody.stream ?? false,
 			temperature: requestBody.temperature,
 			max_tokens: requestBody.max_tokens
 		};
+
+		// 如果请求包含response_format，添加到options中
+		if (requestBody.response_format?.type === 'json_schema') {
+			options.responseFormat = {
+				type: 'json_schema',
+				name: requestBody.response_format.json_schema?.name,
+				strict: requestBody.response_format.json_schema?.strict,
+				schema: requestBody.response_format.json_schema?.schema
+			};
+			console.log('[Chat] [步骤1.5] Response format detected:', {
+				type: options.responseFormat.type,
+				name: options.responseFormat.name,
+				hasSchema: !!options.responseFormat.schema
+			});
+		}
 
 		if (selectedProvider === 'zhipu') {
 			// 使用智谱AI SDK

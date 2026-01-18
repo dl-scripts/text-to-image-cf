@@ -12,6 +12,15 @@ export interface ChatRequest {
 	provider?: string;
 	temperature?: number;
 	max_tokens?: number;
+	top_p?: number;
+	response_format?: {
+		type: 'json_schema';
+		json_schema?: {
+			name?: string;
+			strict?: boolean;
+			schema: any;
+		};
+	};
 	requestId?: string;
 	metadata?: {
 		requestId?: string;
@@ -67,7 +76,7 @@ export interface JSONSchemaFormat {
 	type: 'json_schema';
 	name?: string;
 	strict?: boolean;
-	schema: JSONSchemaProperty;
+	schema: any; // 使用any以支持复杂的嵌套schema
 }
 
 export interface ResponseTextFormat {
