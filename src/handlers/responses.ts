@@ -67,10 +67,12 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 
         const config = getProviderConfig(selectedProvider, env);
 
-        console.log('[Response API] Provider selected:', {
+        console.log('-- SELECTED PROVIDER:', selectedProvider);
+        console.log('[Response API] Provider details:', {
             requested_provider: providerName,
             selected_provider: selectedProvider,
             model: config.model,
+            endpoint: config.endpoint,
             circuit_breaker_status: circuitBreaker.canExecute(selectedProvider) ? 'available' : 'degraded'
         });
 
@@ -98,12 +100,12 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                 const res = await callOpenAICompatible(conf, messages, options);
                 if (!res.ok) {
                     const errBody = await res.json().catch(() => ({}));
-                    console.error('[Response API] Provider error:', {
-                        provider: prov,
-                        status: res.status,
-                        error: errBody
-                    });
-                    throw { status: res.status, message: errBody.error?.message || 'Upstream Error' };
+                    console.error('[Response API] ========== PROVIDER ERROR START ==========');
+                    console.error('[Response API] Provider:', prov);
+                    console.error('[Response API] Status:', res.status);
+                    console.error('[Response API] Complete Error Body:', JSON.stringify(errBody, null, 2));
+                    console.error('[Response API] ========== PROVIDER ERROR END ==========');
+                    throw { status: res.status, message: errBody.error?.message || 'Upstream Error', fullError: errBody };
                 }
                 return await res.json();
             }
@@ -120,12 +122,11 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             console.log('[Response API] Complete Response Body:', JSON.stringify(apiResponse, null, 2));
             console.log('[Response API] ========== RESPONSE END ==========');
         } catch (err: any) {
-            console.error('[Response API] Provider call failed:', {
-                provider: selectedProvider,
-                error: err.message || err,
-                status: err.status,
-                duration_ms: Date.now() - requestStartTime
-            });
+            console.error('[Response API] ========== CALL FAILED ERROR START ==========');
+            console.error('[Response API] Provider:', selectedProvider);
+            console.error('[Response API] Duration (ms):', Date.now() - requestStartTime);
+            console.error('[Response API] Complete Error Object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+            console.error('[Response API] ========== CALL FAILED ERROR END ==========');
             
             circuitBreaker.recordFailure(selectedProvider!, err);
             // 自动容灾重试
@@ -166,14 +167,12 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
         });
 
     } catch (error: any) {
-        console.error('[Response API] Request failed:', {
-            error: error.message || 'Internal Server Error',
-            provider: selectedProvider,
-            status: error.status || 500,
-            duration_ms: Date.now() - requestStartTime,
-            timestamp: new Date().toISOString(),
-            stack: error.stack
-        });
+        console.error('[Response API] ========== FINAL ERROR START ==========');
+        console.error('[Response API] Provider:', selectedProvider);
+        console.error('[Response API] Duration (ms):', Date.now() - requestStartTime);
+        console.error('[Response API] Timestamp:', new Date().toISOString());
+        console.error('[Response API] Complete Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        console.error('[Response API] ========== FINAL ERROR END ==========');
 
         return new Response(JSON.stringify({
             error: { message: error.message || 'Internal Server Error', provider: selectedProvider }
