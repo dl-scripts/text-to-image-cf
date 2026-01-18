@@ -30,7 +30,6 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
     try {
         // 记录原始请求 - 完整内容
         console.log('[Response API] ========== REQUEST START ==========');
-        console.log('[Response API] Timestamp:', new Date().toISOString());
         console.log('[Response API] Complete Request Body:', JSON.stringify(requestBody, null, 2));
         console.log('[Response API] ========== REQUEST END ==========');
 
