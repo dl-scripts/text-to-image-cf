@@ -7,25 +7,19 @@ import { handleResponseAPI } from './handlers/responses';
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const startTime = Date.now();
-		
+
 		try {
 			const url = new URL(request.url);
 			const pathname = url.pathname;
 			const method = request.method;
-			
-			// Handle OPTIONS requests for CORS
-			if (method === 'OPTIONS') {
-				return new Response(null, {
-					status: 200,
-					headers: corsHeaders
-				});
-			}
+
+			console.log('[Main] [入口] Request received:', { pathname, method });
 
 			// 处理聊天完成请求
 			if (pathname === '/v1/chat/completions' || pathname === '/chat') {
 				// 只处理POST请求
 				if (method !== 'POST') {
-					return new Response('Method not allowed', { 
+					return new Response('Method not allowed', {
 						status: 405,
 						headers: corsHeaders
 					});
@@ -33,7 +27,7 @@ export default {
 
 				let requestBody;
 				const contentType = request.headers.get('content-type') || '';
-				
+
 				if (contentType.includes('application/json')) {
 					requestBody = await request.json();
 				} else if (contentType.includes('text/plain')) {
@@ -53,17 +47,17 @@ export default {
 					});
 				}
 
-				console.log('[Request] Processing chat completion');
+			console.log('[Main] [路由1-Chat] Processing chat completion');
 
 			// 直接处理请求
 			const response = await handleChatCompletion(requestBody, env);
-				const duration = Date.now() - startTime;
-				console.log('Request processed:', {
+			const duration = Date.now() - startTime;
+			console.log('[Main] [路由1-Chat] Request processed:', {
 					path: pathname,
 					duration: duration,
 					timestamp: new Date().toISOString()
 				});
-				
+
 				return response;
 			}
 
@@ -71,7 +65,7 @@ export default {
 			if (pathname === '/v1/embeddings' || pathname === '/embeddings') {
 				// 只处理POST请求
 				if (method !== 'POST') {
-					return new Response('Method not allowed for embedding', { 
+					return new Response('Method not allowed for embedding', {
 						status: 405,
 						headers: corsHeaders
 					});
@@ -79,7 +73,7 @@ export default {
 
 				let requestText;
 				const contentType = request.headers.get('content-type') || '';
-				
+
 				if (contentType.includes('text/plain') || contentType === '') {
 					requestText = await request.text();
 				} else {
@@ -90,22 +84,22 @@ export default {
 				}
 
 				const response = await handleEmbedding(requestText, env);
-				
+
 				// 添加性能日志
 				const duration = Date.now() - startTime;
-				console.log('Embedding Request processed:', {
+			console.log('[Main] [路由2-Embedding] Request processed:', {
 					path: pathname,
 					duration: duration,
 					timestamp: new Date().toISOString()
 				});
-				
+
 				return response;
 			}
 			// 处理 Responses API
 			if (pathname === '/v1/responses' || pathname === '/responses') {
 				// 只处理POST请求
 				if (method !== 'POST') {
-					return new Response('Method not allowed for responses', { 
+					return new Response('Method not allowed for responses', {
 						status: 405,
 						headers: corsHeaders
 					});
@@ -113,7 +107,7 @@ export default {
 
 				let requestBody;
 				const contentType = request.headers.get('content-type') || '';
-				
+
 				if (contentType.includes('application/json')) {
 					requestBody = await request.json();
 				} else {
@@ -123,18 +117,15 @@ export default {
 					});
 				}
 
-				console.log('[Request] Processing Responses API');
-
-				const response = await handleResponseAPI(requestBody as any, env);
-				
+			console.log('[Main] [路由3-Response] Processing Responses API');
 				// 添加性能日志
 				const duration = Date.now() - startTime;
-				console.log('Responses API Request processed:', {
+			console.log('[Main] [路由3-Response] Request processed:', {
 					path: pathname,
 					duration: duration,
 					timestamp: new Date().toISOString()
 				});
-				
+
 				return response;
 			}
 
@@ -159,8 +150,8 @@ export default {
 			});
 
 		} catch (error) {
-			console.error('Worker error:', error);
-			
+			console.error('[Main] [错误] Worker error:', error);
+
 			return new Response(JSON.stringify({
 				error: {
 					message: error instanceof Error ? error.message : 'Unknown error',

@@ -35,7 +35,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			messageData['message_' + index] = element;
 		}
 
-		console.log('Chat completion request:', messageData);
+		console.log('[Chat] [步骤1] Chat completion request:', messageData);
 
 		const options = {
 			stream: requestBody.stream ?? false,
@@ -45,6 +45,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 
 		if (selectedProvider === 'zhipu') {
 			// 使用智谱AI SDK
+			console.log('[Chat] [步骤2] Using Zhipu AI Provider');
 			let response;
 			const originalProvider = selectedProvider;
 			try {
@@ -58,7 +59,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			// 如果5xx错误或超时，切换到另一个provider重试
 			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
 				const retryProvider = getAlternativeProvider(originalProvider);
-				console.log(`${originalProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
+				console.log(`[Chat] [步骤3-重试] ${originalProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
 				hasRetried = true;
 				const retryConfig = getProviderConfig(retryProvider, env);
 				selectedProvider = retryProvider;
@@ -101,10 +102,16 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 					} else {
 						// 非流式响应
 						const data = await retryResponse.json() as any;
-						console.log(`Chat completion successful (retried with ${retryProvider}):`, {
+						console.log(`[Chat Retry] [步骤3-成功] Chat completion successful (retried with ${retryProvider}):`, {
 							responseLength: JSON.stringify(data).length,
 							finishReason: data.choices?.[0]?.finish_reason
 						});
+
+						console.log('[Chat Retry] [步骤3] ========== API RESPONSE START ==========');
+						console.log('[Chat Retry] [步骤3] Original Provider:', originalProvider);
+						console.log('[Chat Retry] [步骤3] Retry Provider:', retryProvider);
+						console.log('[Chat Retry] [步骤3] Complete API Response:', JSON.stringify(data, null, 2));
+						console.log('[Chat Retry] [步骤3] ========== API RESPONSE END ==========');
 
 						return new Response(JSON.stringify({
 							id: data.id || `chatcmpl-${Date.now()}`,
@@ -176,12 +183,18 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 非流式响应
 				const result = response as any;
 				const resultStr = JSON.stringify(result);
-				console.log('Chat completion successful:', {
+			console.log('[Chat] [步骤4-成功] Chat completion successful:', {
 					responseLength: resultStr.length,
 					response: resultStr,
 					finishReason: result.choices?.[0]?.finish_reason,
 					retried: hasRetried
 				});
+
+				console.log('[Chat] [步骤4] ========== API RESPONSE START ==========');
+				console.log('[Chat] [步骤4] Provider:', selectedProvider);
+				console.log('[Chat] [步骤4] Retried:', hasRetried);
+				console.log('[Chat] [步骤4] Complete API Response:', JSON.stringify(result, null, 2));
+				console.log('[Chat] [步骤4] ========== API RESPONSE END ==========');
 
 				const completeResponse = {
 					id: `chatcmpl-${Date.now()}`,
@@ -212,6 +225,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			}
 		} else if (selectedProvider === 'deepseek' || selectedProvider === 'nim' || selectedProvider === 'nim2' || selectedProvider === 'openrouter' || selectedProvider === 'openrouter2') {
 			// 使用DeepSeek/NIM/OpenRouter API (OpenAI兼容)
+			console.log('[Chat] [步骤2] Using OpenAI Compatible Provider:', selectedProvider);
 			let response;
 			const originalProvider = selectedProvider;
 			try {
@@ -225,7 +239,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			// 如果5xx错误或超时，切换到另一个provider重试
 			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
 				const retryProvider = getAlternativeProvider(originalProvider);
-				console.log(`${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
+				console.log(`[Chat] [步骤3-重试] ${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
 				hasRetried = true;
 				const retryConfig = getProviderConfig(retryProvider, env);
 				selectedProvider = retryProvider;
@@ -275,11 +289,17 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 			} else {
 				// 非流式响应
 				const data = await response.json() as any;
-				console.log('Chat completion successful:', {
+			console.log('[Chat] [步骤4-成功] Chat completion successful:', {
 					responseLength: JSON.stringify(data).length,
 					finishReason: data.choices?.[0]?.finish_reason,
 					retried: hasRetried
 				});
+
+				console.log('[Chat] [步骤4] ========== API RESPONSE START ==========');
+				console.log('[Chat] [步骤4] Provider:', selectedProvider);
+				console.log('[Chat] [步骤4] Retried:', hasRetried);
+				console.log('[Chat] [步骤4] Complete API Response:', JSON.stringify(data, null, 2));
+				console.log('[Chat] [步骤4] ========== API RESPONSE END ==========');
 
 				const completeResponse = {
 					id: data.id || `chatcmpl-${Date.now()}`,
@@ -313,7 +333,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 		}
 
 	} catch (error) {
-		console.error('! Chat completion error:', error);
+		console.error('[Chat] [最终错误] Chat completion error:', error);
 		
 		let errorMessage = 'Unknown error occurred';
 		if (error instanceof Error) {
