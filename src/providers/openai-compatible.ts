@@ -23,14 +23,20 @@ export async function callOpenAICompatible(
 
 	// 如果有responseFormat，添加response_format参数
 	if (options.responseFormat) {
-		requestBody.response_format = {
-			type: options.responseFormat.type,
-			json_schema: {
-				name: options.responseFormat.name || 'response_schema',
-				strict: options.responseFormat.strict ?? true,
-				schema: options.responseFormat.schema
-			}
-		};
+		// DeepSeek 不支持 json_schema，只支持简单的 json_object
+		if (config.name === 'deepseek') {
+			requestBody.response_format = { type: 'json_object' };
+		} else {
+			// 其他提供商使用完整的 json_schema
+			requestBody.response_format = {
+				type: options.responseFormat.type,
+				json_schema: {
+					name: options.responseFormat.name || 'response_schema',
+					strict: options.responseFormat.strict ?? true,
+					schema: options.responseFormat.schema
+				}
+			};
+		}
 	}
 	
 	const response = await fetchWithTimeout(config.baseURL, {
