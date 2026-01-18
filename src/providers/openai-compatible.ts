@@ -1,7 +1,7 @@
 import { AIProviderConfig, ChatMessage, JSONSchemaFormat } from '../types';
 import { fetchWithTimeout } from '../utils';
 
-// 调用OpenAI兼容API (SiliconFlow/DeepSeek/NIM)
+// 调用OpenAI兼容API (DeepSeek/NIM)
 export async function callOpenAICompatible(
 	config: AIProviderConfig,
 	messages: ChatMessage[],
@@ -40,7 +40,7 @@ export async function callOpenAICompatible(
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(requestBody)
-	}, 9000); // 15秒超时
+	}, 15000); // 15秒超时
 
 	if (!response.ok) {
 		const errorData = await response.json() as any;

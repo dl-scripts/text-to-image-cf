@@ -11,7 +11,7 @@ export const corsHeaders = {
 
 // 获取一个与当前provider不同的备用provider
 export function getAlternativeProvider(currentProvider: AIProvider): AIProvider {
-	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'siliconflow', 'nim', 'nim2', 'openrouter'];
+	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'nim', 'nim2', 'openrouter', 'openrouter2'];
 	// 过滤掉当前provider
 	const otherProviders = allProviders.filter(p => p !== currentProvider);
 	// 获取可用的provider
@@ -33,7 +33,7 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	// 检查请求中是否有provider参数
 	if (request.provider) {
 		const provider = request.provider.toLowerCase();
-		if (provider === 'zhipu' || provider === 'siliconflow' || provider === 'deepseek' || provider === 'nim' || provider === 'nim2' || provider === 'openrouter') {
+		if (provider === 'zhipu' || provider === 'deepseek' || provider === 'nim' || provider === 'nim2' || provider === 'openrouter' || provider==="openrouter2") {
 			const selectedProvider = provider as AIProvider;
 			// 即使指定了provider，也要检查断路器状态
 			if (circuitBreaker.canExecute(selectedProvider)) {
@@ -50,7 +50,7 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	)?.content?.split('provider=')[1]?.trim();
 	
 	// 如果指定了provider参数，使用指定的provider
-	if (providerParam === 'zhipu' || providerParam === 'siliconflow' || providerParam === 'deepseek' || providerParam === 'nim' || providerParam === 'nim2' || providerParam === 'openrouter') {
+	if (providerParam === 'zhipu' || providerParam === 'deepseek' || providerParam === 'nim' || providerParam === 'nim2' || providerParam === 'openrouter' || providerParam === 'openrouter2') {
 		const selectedProvider = providerParam as AIProvider;
 		if (circuitBreaker.canExecute(selectedProvider)) {
 			return selectedProvider;
@@ -59,7 +59,7 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	}
 	
 	// 随机选择一个可用的provider, remove siliconflow
-	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'nim', 'nim2', 'openrouter', 'siliconflow'];
+	const allProviders: AIProvider[] = ['zhipu', 'deepseek', 'nim', 'nim2', 'openrouter', 'openrouter2'];
 	const availableProviders = circuitBreaker.getAvailableProviders(allProviders);
 	
 	if (availableProviders.length === 0) {
@@ -117,6 +117,13 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 				name: 'openrouter',
 				apiKey: env.OPENROUTER_API_KEY || '',
 				model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
+				baseURL: 'https://openrouter.ai/api/v1/response'
+			};      
+		case 'openrouter2':
+			return {
+				name: 'openrouter2',
+				apiKey: env.OPENROUTER_API_KEY || '',
+				model: env.OPENROUTER_MODEL || 'z-ai/glm-4.5-air:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};            
 		default:
