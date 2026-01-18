@@ -117,7 +117,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 				name: 'openrouter',
 				apiKey: env.OPENROUTER_API_KEY || '',
 				model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
-				baseURL: 'https://openrouter.ai/api/v1/response'
+				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};      
 		case 'openrouter2':
 			return {
