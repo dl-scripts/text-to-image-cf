@@ -109,21 +109,21 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'nim2',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'minimaxai/minimax-m2',
+				model: env.NVIDIA_MODEL || 'moonshotai/kimi-k2-instruct',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};		
 		case 'openrouter':
 			return {
 				name: 'openrouter',
 				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
+				model: env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};      
 		case 'openrouter2':
 			return {
 				name: 'openrouter2',
 				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'z-ai/glm-4.5-air:free',
+				model: env.OPENROUTER_MODEL || 'qwen/qwen3-next-80b-a3b-instruct:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};            
 		default:
