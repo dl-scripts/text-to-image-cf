@@ -40,7 +40,7 @@ export async function callOpenAICompatible(
 			'Content-Type': 'application/json'
 		},
 		body: JSON.stringify(requestBody)
-	}, 12000); // 5秒超时
+	}, 15000); // 15秒超时
 
 	if (!response.ok) {
 		const errorData = await response.json() as any;
