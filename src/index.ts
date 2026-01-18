@@ -1,4 +1,4 @@
-import { Env } from './types';
+import { Env, ResponseRequest } from './types';
 import { corsHeaders } from './config';
 import { handleChatCompletion } from './handlers/chat';
 import { handleEmbedding } from './handlers/embedding';
@@ -118,34 +118,36 @@ export default {
 				}
 
 			console.log('[Main] [路由3-Response] Processing Responses API');
-				// 添加性能日志
-				const duration = Date.now() - startTime;
+			
+			const response = await handleResponseAPI(requestBody as ResponseRequest, env);
+			
+			// 添加性能日志
+			const duration = Date.now() - startTime;
 			console.log('[Main] [路由3-Response] Request processed:', {
-					path: pathname,
-					duration: duration,
-					timestamp: new Date().toISOString()
-				});
+				path: pathname,
+				duration: duration,
+				timestamp: new Date().toISOString()
+			});
 
-				return response;
-			}
+			return response;
+		}
 
-			// 旧版兼容性 - 重定向到新的聊天API
-			if (pathname.startsWith('/api/ai/')) {
-				return new Response(JSON.stringify({
-					message: 'API路径已迁移，请使用新路径进行聊天',
-					new_path: '/v1/chat/completions',
-					deprecated: true
-				}), {
-					status: 301,
-					headers: {
-						'Location': '/v1/chat/completions',
-						...corsHeaders
-					}
-				});
-			}
+		// 旧版兼容性 - 重定向到新的聊天API
+		if (pathname.startsWith('/api/ai/')) {			
+			return new Response(JSON.stringify({
+				message: 'API路径已迁移，请使用新路径进行聊天',
+				new_path: '/v1/chat/completions',
+				deprecated: true
+			}), {
+				status: 301,
+				headers: {
+					'Location': '/v1/chat/completions',
+					...corsHeaders
+				}
+			});
+		}
 
-			return new Response('Not Found', {
-				status: 404,
+		return new Response('Not Found', {				status: 404,
 				headers: corsHeaders
 			});
 
