@@ -1,5 +1,5 @@
 import { ResponseRequest, Env, ResponseMessage, ChatMessage, AIProvider } from '../types';
-import { corsHeaders, getProviderConfig, getAlternativeProvider } from '../config';
+import { corsHeaders, getProviderConfig, getAlternativeProvider, getProviderFromRequest } from '../config';
 import { callZhipuAI } from '../providers/zhipu';
 import { callOpenAICompatible } from '../providers/openai-compatible';
 import { circuitBreaker } from '../circuit-breaker';
@@ -57,12 +57,21 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
         console.log('[Response API] Converted Messages:', JSON.stringify(messages, null, 2));
 
         // 3. 动态 Provider 调度
-        const providerName = requestBody.provider?.toLowerCase() as AIProvider;
-        if (providerName && circuitBreaker.canExecute(providerName)) {
-            selectedProvider = providerName;
+        const providerName = requestBody.provider?.toLowerCase();
+        
+        // 如果客户端传入 'custom'，则随机选择一个可用的 provider
+        if (providerName === 'custom') {
+            selectedProvider = getProviderFromRequest({ messages } as any);
+            console.log('[Response API] Custom provider selected:', selectedProvider);
+        } else if (providerName && circuitBreaker.canExecute(providerName as AIProvider)) {
+            selectedProvider = providerName as AIProvider;
+        } else if (providerName) {
+            // 指定的 provider 不可用，选择替代的
+            console.log('[Response API] Requested provider unavailable:', providerName);
+            selectedProvider = getProviderFromRequest({ messages } as any);
         } else {
-            const available = circuitBreaker.getAvailableProviders(['zhipu', 'deepseek', 'siliconflow', 'nim', 'nim2', 'openrouter']);
-            selectedProvider = available.length > 0 ? available[0] : 'nim2';
+            // 没有指定 provider，随机选择
+            selectedProvider = getProviderFromRequest({ messages } as any);
         }
 
         const config = getProviderConfig(selectedProvider, env);
@@ -112,41 +121,58 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
         };
 
         let apiResponse: any;
-        try {
-            apiResponse = await executeCall(selectedProvider, config);
-            circuitBreaker.recordSuccess(selectedProvider);
-            
-            console.log('[Response API] ========== RESPONSE START ==========');
-            console.log('[Response API] Provider:', selectedProvider);
-            console.log('[Response API] Duration (ms):', Date.now() - requestStartTime);
-            console.log('[Response API] Complete Response Body:', JSON.stringify(apiResponse, null, 2));
-            console.log('[Response API] ========== RESPONSE END ==========');
-        } catch (err: any) {
-            console.error('[Response API] ========== CALL FAILED ERROR START ==========');
-            console.error('[Response API] Provider:', selectedProvider);
-            console.error('[Response API] Duration (ms):', Date.now() - requestStartTime);
-            console.error('[Response API] Complete Error Object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-            console.error('[Response API] ========== CALL FAILED ERROR END ==========');
-            
-            circuitBreaker.recordFailure(selectedProvider!, err);
-            // 自动容灾重试
-            const retryProv = getAlternativeProvider(selectedProvider!);
-            selectedProvider = retryProv;
-            hasRetried = true;
-            
-            console.log('[Response API] Retrying with alternative provider:', {
-                original_provider: selectedProvider,
-                retry_provider: retryProv
-            });
-            
-            apiResponse = await executeCall(retryProv, getProviderConfig(retryProv, env));
-            circuitBreaker.recordSuccess(retryProv);
-            
-            console.log('[Response API] ========== RETRY RESPONSE START ==========');
-            console.log('[Response API] Retry Provider:', retryProv);
-            console.log('[Response API] Total Duration (ms):', Date.now() - requestStartTime);
-            console.log('[Response API] Complete Retry Response Body:', JSON.stringify(apiResponse, null, 2));
-            console.log('[Response API] ========== RETRY RESPONSE END ==========');
+        const maxRetries = 2; // 至少尝试2个不同的provider（如果第一个失败）
+        let retryCount = 0;
+        const triedProviders: AIProvider[] = [];
+        
+        while (retryCount <= maxRetries) {
+            try {
+                triedProviders.push(selectedProvider);
+                apiResponse = await executeCall(selectedProvider, config);
+                circuitBreaker.recordSuccess(selectedProvider);
+                
+                console.log('[Response API] ========== RESPONSE START ==========');
+                console.log('[Response API] Provider:', selectedProvider);
+                console.log('[Response API] Retry Count:', retryCount);
+                console.log('[Response API] Duration (ms):', Date.now() - requestStartTime);
+                console.log('[Response API] Complete Response Body:', JSON.stringify(apiResponse, null, 2));
+                console.log('[Response API] ========== RESPONSE END ==========');
+                
+                break; // 成功，跳出循环
+            } catch (err: any) {
+                console.error('[Response API] ========== CALL FAILED ERROR START ==========');
+                console.error('[Response API] Provider:', selectedProvider);
+                console.error('[Response API] Retry Count:', retryCount);
+                console.error('[Response API] Duration (ms):', Date.now() - requestStartTime);
+                console.error('[Response API] Complete Error Object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+                console.error('[Response API] ========== CALL FAILED ERROR END ==========');
+                
+                circuitBreaker.recordFailure(selectedProvider!, err);
+                
+                // 如果还有重试机会，选择替代provider
+                if (retryCount < maxRetries) {
+                    const retryProv = getAlternativeProvider(selectedProvider!);
+                    const previousProvider = selectedProvider;
+                    selectedProvider = retryProv;
+                    hasRetried = true;
+                    retryCount++;
+                    
+                    console.log('[Response API] Retrying with alternative provider:', {
+                        attempt: retryCount + 1,
+                        failed_provider: previousProvider,
+                        retry_provider: retryProv,
+                        tried_providers: triedProviders
+                    });
+                    
+                    // 更新config为新的provider
+                    const newConfig = getProviderConfig(retryProv, env);
+                    Object.assign(config, newConfig);
+                } else {
+                    // 所有重试都失败了，抛出最后一个错误
+                    console.error('[Response API] All retry attempts exhausted');
+                    throw err;
+                }
+            }
         }
 
         // 6. 原始响应透传
