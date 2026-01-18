@@ -28,20 +28,11 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
     const requestStartTime = Date.now();
 
     try {
-        // 记录原始请求
-        console.log('[Response API] Request received:', {
-            timestamp: new Date().toISOString(),
-            input_type: typeof requestBody.input,
-            provider: requestBody.provider,
-            temperature: requestBody.temperature,
-            max_tokens: requestBody.max_tokens,
-            response_format: (requestBody as any).response_format || requestBody.text?.format,
-            input_preview: typeof requestBody.input === 'string' 
-                ? requestBody.input.substring(0, 100) + (requestBody.input.length > 100 ? '...' : '')
-                : Array.isArray(requestBody.input) 
-                    ? `[${requestBody.input.length} messages]`
-                    : 'unknown'
-        });
+        // 记录原始请求 - 完整内容
+        console.log('[Response API] ========== REQUEST START ==========');
+        console.log('[Response API] Timestamp:', new Date().toISOString());
+        console.log('[Response API] Complete Request Body:', JSON.stringify(requestBody, null, 2));
+        console.log('[Response API] ========== REQUEST END ==========');
 
         // 1. 基础验证
         if (!requestBody || typeof requestBody.input === 'undefined') {
@@ -64,10 +55,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             }));
         }
 
-        console.log('[Response API] Messages converted:', {
-            message_count: messages.length,
-            roles: messages.map(m => m.role)
-        });
+        console.log('[Response API] Converted Messages:', JSON.stringify(messages, null, 2));
 
         // 3. 动态 Provider 调度
         const providerName = requestBody.provider?.toLowerCase() as AIProvider;
@@ -127,14 +115,11 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             apiResponse = await executeCall(selectedProvider, config);
             circuitBreaker.recordSuccess(selectedProvider);
             
-            console.log('[Response API] Provider call succeeded:', {
-                provider: selectedProvider,
-                duration_ms: Date.now() - requestStartTime,
-                has_choices: !!apiResponse.choices,
-                choice_count: apiResponse.choices?.length,
-                finish_reason: apiResponse.choices?.[0]?.finish_reason,
-                usage: apiResponse.usage
-            });
+            console.log('[Response API] ========== RESPONSE START ==========');
+            console.log('[Response API] Provider:', selectedProvider);
+            console.log('[Response API] Duration (ms):', Date.now() - requestStartTime);
+            console.log('[Response API] Complete Response Body:', JSON.stringify(apiResponse, null, 2));
+            console.log('[Response API] ========== RESPONSE END ==========');
         } catch (err: any) {
             console.error('[Response API] Provider call failed:', {
                 provider: selectedProvider,
@@ -157,10 +142,11 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             apiResponse = await executeCall(retryProv, getProviderConfig(retryProv, env));
             circuitBreaker.recordSuccess(retryProv);
             
-            console.log('[Response API] Retry succeeded:', {
-                provider: retryProv,
-                total_duration_ms: Date.now() - requestStartTime
-            });
+            console.log('[Response API] ========== RETRY RESPONSE START ==========');
+            console.log('[Response API] Retry Provider:', retryProv);
+            console.log('[Response API] Total Duration (ms):', Date.now() - requestStartTime);
+            console.log('[Response API] Complete Retry Response Body:', JSON.stringify(apiResponse, null, 2));
+            console.log('[Response API] ========== RETRY RESPONSE END ==========');
         }
 
         // 6. 原始响应透传
