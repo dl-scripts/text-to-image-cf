@@ -50,7 +50,7 @@ export default {
 			console.log('[Main] [路由1-Chat] Processing chat completion');
 
 			// 直接处理请求
-			const response = await handleChatCompletion(requestBody, env);
+			const response = await handleChatCompletion(requestBody, env, request);
 			const duration = Date.now() - startTime;
 			console.log('[Main] [路由1-Chat] Request processed:', {
 					path: pathname,

@@ -6,9 +6,11 @@ import { circuitBreaker } from '../circuit-breaker';
 import { getErrorMessage, getSystemPrompt } from '../prompts';
 
 // Handle chat completion requests
-export async function handleChatCompletion(requestBody: ChatRequest, env: Env): Promise<Response> {
+export async function handleChatCompletion(requestBody: ChatRequest, env: Env, request?: Request): Promise<Response> {
 	let selectedProvider;
 	let hasRetried = false;
+	// 检查是否启用retry机制，默认关闭
+	const enableRetry = request?.headers.get('X-Enable-Retry')?.toLowerCase() === 'true';
 	try {
 		const messages = requestBody.messages || [];
 		const nonSystemMessages = messages.filter(msg => msg.role !== 'system');
@@ -72,8 +74,8 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-			// 如果5xx错误或超时，切换到另一个provider重试
-			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
+			// 如果启用retry且遇到5xx错误或超时，切换到另一个provider重试
+			if (enableRetry && ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout)) {
 				const retryProvider = getAlternativeProvider(originalProvider);
 				console.log(`[Chat] [步骤3-重试] ${originalProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
 				hasRetried = true;
@@ -252,8 +254,8 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env): 
 				// 记录失败
 				circuitBreaker.recordFailure(originalProvider, apiError);
 				
-			// 如果5xx错误或超时，切换到另一个provider重试
-			if ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout) {
+			// 如果启用retry且遇到5xx错误或超时，切换到另一个provider重试
+			if (enableRetry && ((apiError.status && apiError.status >= 500 && apiError.status < 600) || apiError.isTimeout)) {
 				const retryProvider = getAlternativeProvider(originalProvider);
 				console.log(`[Chat] [步骤3-重试] ${selectedProvider} returned ${apiError.status || 'timeout'} error, retrying with ${retryProvider}...`);
 				hasRetried = true;

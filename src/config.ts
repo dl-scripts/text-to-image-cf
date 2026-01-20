@@ -5,7 +5,7 @@ import { circuitBreaker } from './circuit-breaker';
 export const corsHeaders = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id',
+	'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Request-Id, X-Enable-Retry',
 	'Access-Control-Expose-Headers': 'X-AI-Provider, X-Retried',
 };
 
