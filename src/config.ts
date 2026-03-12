@@ -102,7 +102,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'nim',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'moonshotai/kimi-k2.5',
+				model: env.NVIDIA_MODEL || 'qwen/qwen3-next-80b-a3b-instruct',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
         case 'nim2':
@@ -116,7 +116,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'openrouter',
 				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'stepfun/step-3.5-flash:free',
+				model: env.OPENROUTER_MODEL || 'qwen/qwen3-next-80b-a3b-instruct:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};      
 		case 'openrouter2':
@@ -130,7 +130,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'nim2',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'nvidia/nemotron-3-nano-30b-a3b',
+				model: env.NVIDIA_MODEL || 'nvidia/nemotron-3-super-120b-a12b',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
 	}
