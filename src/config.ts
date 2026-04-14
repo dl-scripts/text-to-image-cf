@@ -75,22 +75,6 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 // 根据provider获取对应的配置
 export function getProviderConfig(provider: AIProvider, env: Env): AIProviderConfig {
 	switch (provider) {
-		case 'zhipu':
-			return {
-				name: 'zhipu',
-				apiKey: env.ZHIPU_API_KEY || '',
-				model: env.ZAI_MODEL || 'glm-4-flashx',
-				baseURL: 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
-			};
-		case 'siliconflow':
-			return {
-				name: 'siliconflow',
-				apiKey: env.SILICONFLOW_API_KEY || '',
-				model: env.SILICONFLOW_MODEL || 'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B',
-				embedding_model: env.SILICONFLOW_EMBEDDING_MODEL || 'Qwen/Qwen3-Embedding-0.6B',
-				baseURL: 'https://api.siliconflow.cn/v1/chat/completions',
-				embeddingURL: 'https://api.siliconflow.cn/v1/embeddings'
-			};
 		case 'deepseek':
 			return {
 				name: 'deepseek',
@@ -102,36 +86,36 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'nim',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'qwen/qwen3-next-80b-a3b-instruct',
+				model: env.NVIDIA_MODEL || 'minimaxai/minimax-m2.7',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
         case 'nim2':
 			return {
 				name: 'nim2',
 				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'moonshotai/kimi-k2-instruct',
+				model: env.NVIDIA_MODEL || 'z-ai/glm4.7',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};		
 		case 'openrouter':
 			return {
 				name: 'openrouter',
 				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'qwen/qwen3-next-80b-a3b-instruct:free',
+				model: env.OPENROUTER_MODEL || 'google/gemma-4-31b-it:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};      
 		case 'openrouter2':
 			return {
 				name: 'openrouter2',
 				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'arcee-ai/trinity-large-preview:free',
+				model: env.OPENROUTER_MODEL || 'z-ai/glm-4.5-air:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};            
 		default:
 			return {
-				name: 'nim2',
-				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'nvidia/nemotron-3-super-120b-a12b',
-				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
+				name: 'deepseek',
+				apiKey: env.DEEPSEEK_API_KEY || '',
+				model: 'deepseek-chat',
+				baseURL: 'https://api.deepseek.com/chat/completions'
 			};
 	}
 }
