@@ -19,7 +19,8 @@ export async function callOpenAICompatible(
 		stream: options.stream || false,
 		temperature: options.temperature ?? 0.7,
 		max_tokens: options.max_tokens ?? defaultMaxTokens,
-		thinking: { type: "disabled" }
+		thinking: { type: "disabled" },
+		reasoning: { type: "disabled" }
 	};
 
 	// 如果有responseFormat，添加response_format参数

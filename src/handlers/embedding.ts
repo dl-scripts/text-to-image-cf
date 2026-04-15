@@ -5,7 +5,7 @@ import { createEmbedding } from '../providers/embedding';
 // Handle embedding requests
 export async function handleEmbedding(requestText: string, env: Env): Promise<Response> {
 	try {
-		const config = getProviderConfig('siliconflow', env);
+		const config = getProviderConfig('deepseek', env);
 		const response = await createEmbedding(config, requestText);
 		return response;
 	} catch (error) {

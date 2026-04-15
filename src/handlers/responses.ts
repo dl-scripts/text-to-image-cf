@@ -80,7 +80,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             requested_provider: providerName,
             selected_provider: selectedProvider,
             model: config.model,
-            endpoint: config.endpoint,
+            endpoint: config.baseURL,
             circuit_breaker_status: circuitBreaker.canExecute(selectedProvider) ? 'available' : 'degraded'
         });
 
@@ -105,7 +105,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             
                 const res = await callOpenAICompatible(conf, messages, options);
                 if (!res.ok) {
-                    const errBody = await res.json().catch(() => ({}));
+                    const errBody: any = await res.json().catch(() => ({}));
                     console.error('[Response API] ========== [步骤5] PROVIDER ERROR START ==========');
                     console.error('[Response API] [步骤5] Provider:', prov);
                     console.error('[Response API] [步骤5] Status:', res.status);
