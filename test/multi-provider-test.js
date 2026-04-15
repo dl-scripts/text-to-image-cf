@@ -11,14 +11,6 @@ const testCases = [
     expectedFields: ["provider", "content"]
   },
   {
-    name: "测试指定zhipu provider",
-    provider: "zhipu",
-    messages: [
-      { role: "user", content: "你好，请介绍一下你自己" }
-    ],
-    expectedFields: ["provider", "content"]
-  },
-  {
     name: "测试指定siliconflow provider",
     provider: "siliconflow",
     messages: [
@@ -68,7 +60,7 @@ async function runTests() {
       
       // 检查provider字段是否存在且有效
       if (testCase.provider && data.provider) {
-        const validProviders = ['zhipu', 'siliconflow'];
+        const validProviders = [ 'deepseek'];
         if (validProviders.includes(data.provider)) {
           console.log(`✅ Provider字段正确: ${data.provider}`);
         } else {

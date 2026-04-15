@@ -1,6 +1,5 @@
 import { ResponseRequest, Env, ResponseMessage, ChatMessage, AIProvider } from '../types';
 import { corsHeaders, getProviderConfig, getAlternativeProvider, getProviderFromRequest } from '../config';
-import { callZhipuAI } from '../providers/zhipu';
 import { callOpenAICompatible } from '../providers/openai-compatible';
 import { circuitBreaker } from '../circuit-breaker';
 
@@ -103,9 +102,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                 timestamp: new Date().toISOString()
             });
 
-            if (prov === 'zhipu') {
-                return await callZhipuAI(conf, messages, options);
-            } else {
+            
                 const res = await callOpenAICompatible(conf, messages, options);
                 if (!res.ok) {
                     const errBody = await res.json().catch(() => ({}));
@@ -117,7 +114,6 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                     throw { status: res.status, message: errBody.error?.message || 'Upstream Error', fullError: errBody };
                 }
                 return await res.json();
-            }
         };
 
         let apiResponse: any;

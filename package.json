@@ -14,8 +14,8 @@
 		"publish": true
 	},
 	"devDependencies": {
-		"typescript": "^5.9.3",
-		"wrangler": "^4.53.0"
+		"typescript": "^6.0.2",
+		"wrangler": "^4.83.0"
 	},
 	"private": true,
 	"scripts": {
@@ -26,7 +26,6 @@
 		"test": "node test/multi-provider-test.js"
 	},
 	"dependencies": {
-		"openai": "^6.10.0",
-		"zhipuai-sdk-nodejs-v4": "^0.1.12"
+		"openai": "^6.34.0"
 	}
 }

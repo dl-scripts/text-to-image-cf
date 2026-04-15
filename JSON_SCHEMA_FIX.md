@@ -107,21 +107,6 @@ if (requestBody.response_format?.type === 'json_schema') {
 
 ## 验证
 
-智谱AI的provider实现 (src/providers/zhipu.ts) 已经正确支持了response_format：
-
-```typescript
-// 如果有responseFormat，添加response_format参数
-if (options.responseFormat) {
-	requestParams.response_format = {
-		type: options.responseFormat.type,
-		json_schema: {
-			name: options.responseFormat.name || 'response_schema',
-			strict: options.responseFormat.strict ?? true,
-			schema: options.responseFormat.schema
-		}
-	};
-}
-```
 
 ## 测试
 
@@ -147,5 +132,4 @@ node test/test-json-schema.js
 
 - `src/types.ts` - 类型定义
 - `src/handlers/chat.ts` - 请求处理逻辑
-- `src/providers/zhipu.ts` - 智谱AI provider实现
 - `test/test-json-schema.js` - 测试脚本

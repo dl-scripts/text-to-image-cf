@@ -28,7 +28,7 @@ export interface ChatRequest {
 	};
 }
 
-export type AIProvider = 'zhipu' | 'siliconflow' | 'deepseek' | 'nim' | 'nim2' | 'openrouter' | 'openrouter2';
+export type AIProvider = 'deepseek' | 'nim' | 'nim2' | 'openrouter' | 'openrouter2';
 
 export interface AIProviderConfig {
 	name: AIProvider;
