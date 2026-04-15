@@ -28,7 +28,7 @@ export interface ChatRequest {
 	};
 }
 
-export type AIProvider = 'deepseek' | 'nim' | 'nim2' | 'openrouter' | 'openrouter2';
+export type AIProvider = 'deepseek' | 'nim'  | 'openrouter' ;
 
 export interface AIProviderConfig {
 	name: AIProvider;

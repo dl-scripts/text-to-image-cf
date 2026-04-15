@@ -11,7 +11,7 @@ export const corsHeaders = {
 
 // 获取一个与当前provider不同的备用provider
 export function getAlternativeProvider(currentProvider: AIProvider): AIProvider {
-	const allProviders: AIProvider[] = ['deepseek', 'nim', 'nim2', 'openrouter', 'openrouter2'];
+	const allProviders: AIProvider[] = ['deepseek', 'nim', 'openrouter'];
 	// 过滤掉当前provider
 	const otherProviders = allProviders.filter(p => p !== currentProvider);
 	// 获取可用的provider
@@ -33,7 +33,7 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	// 检查请求中是否有provider参数
 	if (request.provider) {
 		const provider = request.provider.toLowerCase();
-		if (provider === 'deepseek' || provider === 'nim' || provider === 'nim2' || provider === 'openrouter' || provider==="openrouter2") {
+		if (provider === 'deepseek' || provider === 'nim'  || provider === 'openrouter') {
 			const selectedProvider = provider as AIProvider;
 			// 即使指定了provider，也要检查断路器状态
 			if (circuitBreaker.canExecute(selectedProvider)) {
@@ -50,7 +50,7 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	)?.content?.split('provider=')[1]?.trim();
 	
 	// 如果指定了provider参数，使用指定的provider
-	if (providerParam === 'deepseek' || providerParam === 'nim' || providerParam === 'nim2' || providerParam === 'openrouter' || providerParam === 'openrouter2') {
+	if (providerParam === 'deepseek' || providerParam === 'nim' || providerParam === 'openrouter' ) {
 		const selectedProvider = providerParam as AIProvider;
 		if (circuitBreaker.canExecute(selectedProvider)) {
 			return selectedProvider;
@@ -59,13 +59,12 @@ export function getProviderFromRequest(request: ChatRequest): AIProvider {
 	}
 	
 	// 随机选择一个可用的provider, remove siliconflow
-	const allProviders: AIProvider[] = ['deepseek', 'nim', 'nim2', 'openrouter', 'openrouter2'];
+	const allProviders: AIProvider[] = ['deepseek', 'nim', 'openrouter'];
 	const availableProviders = circuitBreaker.getAvailableProviders(allProviders);
 	
 	if (availableProviders.length === 0) {
-		// 所有provider都不可用，返回nim作为最后的选择
-		console.warn('[Circuit Breaker] All providers unavailable, using nim as fallback');
-		return 'nim2';
+		console.warn('[Circuit Breaker] All providers unavailable, using deepseek as fallback');
+		return 'deepseek';
 	}
 	
 	const randomIndex = Math.floor(Math.random() * availableProviders.length);
@@ -89,13 +88,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 				model: env.NVIDIA_MODEL || 'minimaxai/minimax-m2.7',
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
-        case 'nim2':
-			return {
-				name: 'nim2',
-				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'z-ai/glm4.7',
-				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
-			};		
+	
 		case 'openrouter':
 			return {
 				name: 'openrouter',
@@ -103,13 +96,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 				model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
 				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
 			};      
-		case 'openrouter2':
-			return {
-				name: 'openrouter2',
-				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'z-ai/glm-4.5-air:free',
-				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
-			};            
+         
 		default:
 			return {
 				name: 'deepseek',

@@ -61,7 +61,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env, r
 			});
 		}
 
-		if (selectedProvider === 'deepseek' || selectedProvider === 'nim' || selectedProvider === 'nim2' || selectedProvider === 'openrouter' || selectedProvider === 'openrouter2') {
+		if (selectedProvider === 'deepseek' || selectedProvider === 'nim'  || selectedProvider === 'openrouter') {
 			// 使用DeepSeek/NIM/OpenRouter API (OpenAI兼容)
 			console.log('[Chat] [步骤2] Using OpenAI Compatible Provider:', selectedProvider);
 			let response;
