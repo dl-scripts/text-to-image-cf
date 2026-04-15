@@ -117,7 +117,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
         };
 
         let apiResponse: any;
-        const maxRetries = 2; // 至少尝试2个不同的provider（如果第一个失败）
+        const maxRetries = 1; // 至少尝试2个不同的provider（如果第一个失败）
         let retryCount = 0;
         const triedProviders: AIProvider[] = [];
         
