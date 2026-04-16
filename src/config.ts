@@ -89,13 +89,13 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
 			};
 	
-		case 'openrouter':
-			return {
-				name: 'openrouter',
-				apiKey: env.OPENROUTER_API_KEY || '',
-				model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
-				baseURL: 'https://openrouter.ai/api/v1/chat/completions'
-			};      
+		// case 'openrouter':
+		// 	return {
+		// 		name: 'openrouter',
+		// 		apiKey: env.OPENROUTER_API_KEY || '',
+		// 		model: env.OPENROUTER_MODEL || 'nvidia/nemotron-3-nano-30b-a3b:free',
+		// 		baseURL: 'https://openrouter.ai/api/v1/chat/completions'
+		// 	};      
          
 		default:
 			return {
