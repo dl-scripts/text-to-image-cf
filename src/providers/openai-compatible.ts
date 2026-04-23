@@ -12,12 +12,16 @@ export async function callOpenAICompatible(
 	}
 
 	const defaultMaxTokens = 8192;
+	let temperature = options.temperature ?? 0.7;
+	if (config.name === 'deepseek') {
+		temperature = 1.3;
+	}
 	
 	const requestBody: any = {
 		model: config.model,
 		messages: messages,
 		stream: options.stream || false,
-		temperature: options.temperature ?? 0.7,
+		temperature: temperature,
 		max_tokens: options.max_tokens ?? defaultMaxTokens,
 		thinking: { type: "disabled" },
 		reasoning: { type: "disabled" }

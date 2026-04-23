@@ -81,13 +81,13 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 				model: 'deepseek-chat',
 				baseURL: 'https://api.deepseek.com/chat/completions'
 			};
-		case 'nim':
-			return {
-				name: 'nim',
-				apiKey: env.NVIDIA_API_KEY || '',
-				model: env.NVIDIA_MODEL || 'minimaxai/minimax-m2.7',
-				baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
-			};
+		// case 'nim':
+		// 	return {
+		// 		name: 'nim',
+		// 		apiKey: env.NVIDIA_API_KEY || '',
+		// 		model: env.NVIDIA_MODEL || 'minimaxai/minimax-m2.7',
+		// 		baseURL: 'https://integrate.api.nvidia.com/v1/chat/completions'
+		// 	};
 	
 		// case 'openrouter':
 		// 	return {
