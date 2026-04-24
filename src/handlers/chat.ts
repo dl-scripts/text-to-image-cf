@@ -155,8 +155,7 @@ export async function handleChatCompletion(requestBody: ChatRequest, env: Env, r
 				};
 				console.log('=== 完整 Chat Completion Response ===');
 				console.log(JSON.stringify(completeResponse, null, 2));
-				console.log('====================================');
-
+				
 				return new Response(JSON.stringify(completeResponse), {
 					headers: {
 						'Content-Type': 'application/json',

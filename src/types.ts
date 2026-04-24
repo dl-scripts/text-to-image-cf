@@ -28,7 +28,7 @@ export interface ChatRequest {
 	};
 }
 
-export type AIProvider = 'deepseek' | 'nim'  | 'openrouter' ;
+export type AIProvider = 'deepseek' ;
 
 export interface AIProviderConfig {
 	name: AIProvider;
@@ -40,11 +40,6 @@ export interface AIProviderConfig {
 }
 
 export interface Env {
-	ZHIPU_API_KEY: string;
-	ZAI_MODEL: string;
-	SILICONFLOW_API_KEY: string;
-	SILICONFLOW_MODEL: string;
-	SILICONFLOW_EMBEDDING_MODEL: string;
 	DEEPSEEK_API_KEY: string;
 	NVIDIA_API_KEY: string;
 	NVIDIA_MODEL: string;

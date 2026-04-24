@@ -28,13 +28,11 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 
     try {
         // 记录原始请求 - 完整内容
-        console.log('[Response API] ========== [步骤1] REQUEST START ==========');
-        console.log('[Response API] [步骤1] Complete Request Body:', JSON.stringify(requestBody, null, 2));
-        console.log('[Response API] ========== [步骤1] REQUEST END ==========');
+        console.log('[Response API] step1 Complete Request Body:', JSON.stringify(requestBody, null, 2));
 
         // 1. 基础验证
         if (!requestBody || typeof requestBody.input === 'undefined') {
-            console.error('[Response API] [步骤2] Validation failed: Missing input field');
+            console.error('[Response API] step2 Validation failed: Missing input field');
             return new Response(JSON.stringify({ error: { message: 'Missing input field' } }), { 
                 status: 400, 
                 headers: { 'Content-Type': 'application/json', ...corsHeaders } 
@@ -53,20 +51,18 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
             }));
         }
 
-        console.log('[Response API] [步骤3] Converted Messages:', JSON.stringify(messages, null, 2));
-
         // 3. 动态 Provider 调度
         const providerName = requestBody.provider?.toLowerCase();
         
         // 如果客户端传入 'custom'，则随机选择一个可用的 provider
         if (providerName === 'custom') {
             selectedProvider = getProviderFromRequest({ messages } as any);
-            console.log('[Response API] [步骤4] Custom provider selected:', selectedProvider);
+            console.log('[Response API] step3 Custom provider selected:', selectedProvider);
         } else if (providerName && circuitBreaker.canExecute(providerName as AIProvider)) {
             selectedProvider = providerName as AIProvider;
         } else if (providerName) {
             // 指定的 provider 不可用，选择替代的
-            console.log('[Response API] [步骤4] Requested provider unavailable:', providerName);
+            console.log('[Response API] step3 Requested provider unavailable:', providerName);
             selectedProvider = getProviderFromRequest({ messages } as any);
         } else {
             // 没有指定 provider，随机选择
@@ -75,8 +71,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 
         const config = getProviderConfig(selectedProvider, env);
 
-        console.log('[Response API] [步骤4] -- SELECTED PROVIDER:', selectedProvider);
-        console.log('[Response API] [步骤4] Provider details:', {
+        console.log('[Response API] step3 Provider details:', {
             requested_provider: providerName,
             selected_provider: selectedProvider,
             model: config.model,
@@ -95,7 +90,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
 
         // 5. 执行逻辑 (通用透传)
         const executeCall = async (prov: AIProvider, conf: any) => {
-            console.log('[Response API] [步骤5] Calling provider:', {
+            console.log('[Response API] step4 Calling provider:', {
                 provider: prov,
                 model: conf.model,
                 endpoint: conf.endpoint,
@@ -106,11 +101,8 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                 const res = await callOpenAICompatible(conf, messages, options);
                 if (!res.ok) {
                     const errBody: any = await res.json().catch(() => ({}));
-                    console.error('[Response API] ========== [步骤5] PROVIDER ERROR START ==========');
-                    console.error('[Response API] [步骤5] Provider:', prov);
-                    console.error('[Response API] [步骤5] Status:', res.status);
-                    console.error('[Response API] [步骤5] Complete Error Body:', JSON.stringify(errBody, null, 2));
-                    console.error('[Response API] ========== [步骤5] PROVIDER ERROR END ==========');
+                    console.error('[Response API] step5 Provider:', prov);
+                    console.error('[Response API] step5 Complete Error Body:', JSON.stringify(errBody, null, 2));
                     throw { status: res.status, message: errBody.error?.message || 'Upstream Error', fullError: errBody };
                 }
                 return await res.json();
@@ -127,21 +119,16 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                 apiResponse = await executeCall(selectedProvider, config);
                 circuitBreaker.recordSuccess(selectedProvider);
                 
-                console.log('[Response API] ========== [步骤6] SUCCESS RESPONSE START ==========');
-                console.log('[Response API] [步骤6] Provider:', selectedProvider);
-                console.log('[Response API] [步骤6] Retry Count:', retryCount);
-                console.log('[Response API] [步骤6] Duration (ms):', Date.now() - requestStartTime);
-                console.log('[Response API] [步骤6] Complete Response Body:', JSON.stringify(apiResponse, null, 2));
-                console.log('[Response API] ========== [步骤6] SUCCESS RESPONSE END ==========');
+                console.log('[Response API] step5 Provider:', selectedProvider);
+                console.log('[Response API] step5 Retry Count:', retryCount);
+                console.log('[Response API] step5 Complete Response Body:', JSON.stringify(apiResponse, null, 2));
                 
                 break; // 成功，跳出循环
             } catch (err: any) {
-                console.error('[Response API] ========== [步骤5] CALL FAILED ERROR START ==========');
-                console.error('[Response API] [步骤5] Provider:', selectedProvider);
-                console.error('[Response API] [步骤5] Retry Count:', retryCount);
-                console.error('[Response API] [步骤5] Duration (ms):', Date.now() - requestStartTime);
-                console.error('[Response API] [步骤5] Complete Error Object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
-                console.error('[Response API] ========== [步骤5] CALL FAILED ERROR END ==========');
+                console.error('[Response API] step5 Provider:', selectedProvider);
+                console.error('[Response API] step5 Retry Count:', retryCount);
+                console.error('[Response API] step5 Duration (ms):', Date.now() - requestStartTime);
+                console.error('[Response API] step5 Complete Error Object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
                 
                 circuitBreaker.recordFailure(selectedProvider!, err);
                 
@@ -153,7 +140,7 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                     hasRetried = true;
                     retryCount++;
                     
-                    console.log('[Response API] [步骤5-重试] Retrying with alternative provider:', {
+                    console.log('[Response API] step5-retry Retrying with alternative provider:', {
                         attempt: retryCount + 1,
                         failed_provider: previousProvider,
                         retry_provider: retryProv,
@@ -165,14 +152,14 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
                     Object.assign(config, newConfig);
                 } else {
                     // 所有重试都失败了，抛出最后一个错误
-                    console.error('[Response API] [步骤5-重试] All retry attempts exhausted');
+                    console.error('[Response API] step5-retry All retry attempts exhausted');
                     throw err;
                 }
             }
         }
 
         // 6. 原始响应透传
-        console.log('[Response API] [步骤7] Sending response:', {
+        console.log('[Response API] step6 Sending response:', {
             provider: selectedProvider,
             retried: hasRetried,
             total_duration_ms: Date.now() - requestStartTime,
@@ -189,13 +176,10 @@ export async function handleResponseAPI(requestBody: ResponseRequest, env: Env):
         });
 
     } catch (error: any) {
-        console.error('[Response API] ========== [最终错误] FINAL ERROR START ==========');
         console.error('[Response API] [最终错误] Provider:', selectedProvider);
         console.error('[Response API] [最终错误] Duration (ms):', Date.now() - requestStartTime);
-        console.error('[Response API] [最终错误] Timestamp:', new Date().toISOString());
         console.error('[Response API] [最终错误] Complete Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
-        console.error('[Response API] ========== [最终错误] FINAL ERROR END ==========');
-
+        
         return new Response(JSON.stringify({
             error: { message: error.message || 'Internal Server Error', provider: selectedProvider }
         }), { 
