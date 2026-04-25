@@ -78,7 +78,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'deepseek',
 				apiKey: env.DEEPSEEK_API_KEY || '',
-				model: 'deepseek-chat',
+				model: 'deepseek-v4-flash',
 				baseURL: 'https://api.deepseek.com/chat/completions'
 			};
 		// case 'nim':
@@ -101,7 +101,7 @@ export function getProviderConfig(provider: AIProvider, env: Env): AIProviderCon
 			return {
 				name: 'deepseek',
 				apiKey: env.DEEPSEEK_API_KEY || '',
-				model: 'deepseek-chat',
+				model: 'deepseek-v4-flash',
 				baseURL: 'https://api.deepseek.com/chat/completions'
 			};
 	}
